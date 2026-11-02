@@ -1,6 +1,8 @@
-node_modules
-dist
-dist-electron
-*.log
-.DS_Store
+node_modules/
+dist/
+.env*
+!.env.example
 *.local
+__pycache__/
+*.pyc
+firebase-debug.log

@@ -1,0 +1,179 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function friendshipId(firstUid, secondUid) {
+      return firstUid < secondUid
+        ? firstUid + '_' + secondUid
+        : secondUid + '_' + firstUid;
+    }
+
+    function isFriend(otherUid) {
+      let friendship = get(/databases/$(database)/documents/socialConnections/$(friendshipId(request.auth.uid, otherUid)));
+      return signedIn() && friendship.data.status == 'accepted';
+    }
+
+    function activeChatMember(chatId) {
+      let member = get(/databases/$(database)/documents/socialChats/$(chatId)/members/$(request.auth.uid));
+      return signedIn() && exists(/databases/$(database)/documents/socialChats/$(chatId)/members/$(request.auth.uid))
+        && member.data.status == 'active';
+    }
+
+    match /users/{userId} {
+      allow read, create, update: if request.auth != null
+        && request.auth.uid == userId;
+      allow delete: if false;
+
+      match /notes/{noteId} {
+        allow read, delete: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly([
+            'id', 'title', 'subject', 'period', 'academicYear', 'content',
+            'fileName', 'fileType', 'fileData', 'driveFileId', 'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.id == noteId
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 160
+          && request.resource.data.subject is string
+          && request.resource.data.period is string
+          && request.resource.data.academicYear is string
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 150000
+          && request.resource.data.fileData is string
+          && request.resource.data.fileData.size() <= 650000
+          && (!('driveFileId' in request.resource.data)
+            || (request.resource.data.driveFileId is string && request.resource.data.driveFileId.size() <= 200))
+          && request.resource.data.fileName is string
+          && request.resource.data.fileName.size() <= 255
+          && request.resource.data.fileType in ['', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+          && request.resource.data.createdAt is number
+          && request.resource.data.updatedAt is number;
+      }
+    }
+
+    // Username reservation documents contain only the public handle and owner UID.
+    match /usernames/{handle} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.handle == handle;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.handle == handle;
+      allow delete: if false;
+    }
+
+    // This collection contains only fields intended for the community directory.
+    match /socialProfiles/{userId} {
+      allow get: if signedIn() && (request.auth.uid == userId
+        || resource.data.discoverable == true
+        || isFriend(userId));
+      allow list: if signedIn() && resource.data.discoverable == true;
+      allow create, update: if signedIn() && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'photoURL', 'handle', 'bio', 'discoverable', 'avatarColor', 'updatedAt'
+        ])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.photoURL is string
+        && request.resource.data.handle is string
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 120
+        && request.resource.data.discoverable is bool
+        && request.resource.data.avatarColor is string;
+      allow delete: if false;
+    }
+
+    match /socialConnections/{connectionId} {
+      allow get, list: if signedIn() && request.auth.uid in resource.data.users;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'users', 'requester', 'requesterName', 'requesterPhotoURL', 'recipient', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.requester == request.auth.uid
+        && request.resource.data.recipient is string
+        && request.resource.data.recipient != request.auth.uid
+        && request.resource.data.users is list
+        && request.resource.data.users.size() == 2
+        && request.resource.data.users.hasAll([request.auth.uid, request.resource.data.recipient])
+        && request.resource.data.status == 'pending'
+        && connectionId == friendshipId(request.auth.uid, request.resource.data.recipient);
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && ((request.auth.uid == resource.data.recipient
+              && resource.data.status == 'pending'
+              && request.resource.data.status in ['accepted', 'declined'])
+            || (request.auth.uid == resource.data.requester
+              && resource.data.status == 'declined'
+              && request.resource.data.status == 'pending')
+            || (request.auth.uid == resource.data.recipient
+              && resource.data.status == 'declined'
+              && request.resource.data.status == 'pending'
+              && request.resource.data.requester == request.auth.uid
+              && request.resource.data.recipient == resource.data.requester
+              && request.resource.data.users == resource.data.users
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'status', 'requester', 'requesterName', 'requesterPhotoURL', 'recipient', 'updatedAt'
+              ])));
+      allow delete: if signedIn() && request.auth.uid == resource.data.requester
+        && resource.data.status == 'pending';
+    }
+
+    match /socialChats/{chatId} {
+      allow get, list: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.members is list
+        && request.resource.data.members.size() >= 2
+        && request.resource.data.members.size() <= 20
+        && request.resource.data.kind in ['direct', 'group']
+        && request.resource.data.purpose in ['school', 'fun']
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 50;
+      allow update, delete: if false;
+
+      match /members/{memberUid} {
+        allow get, list: if signedIn() && (request.auth.uid == memberUid || activeChatMember(chatId));
+        allow create: if signedIn() && request.resource.data.uid == memberUid
+          && ((request.auth.uid == memberUid
+                && memberUid == getAfter(/databases/$(database)/documents/socialChats/$(chatId)).data.createdBy
+                && request.resource.data.status == 'active')
+              || (request.auth.uid == getAfter(/databases/$(database)/documents/socialChats/$(chatId)).data.createdBy
+                && memberUid in getAfter(/databases/$(database)/documents/socialChats/$(chatId)).data.members
+                && isFriend(memberUid)
+                && request.resource.data.status in ['active', 'invited']));
+        allow update: if signedIn() && request.auth.uid == memberUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt', 'leftAt'])
+          && ((resource.data.status == 'invited' && request.resource.data.status == 'active')
+            || (resource.data.status == 'active' && request.resource.data.status == 'left'));
+        allow delete: if false;
+      }
+
+      match /messages/{messageId} {
+        allow get, list: if activeChatMember(chatId);
+        allow create: if activeChatMember(chatId)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.senderName is string
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+        allow update: if false;
+        allow delete: if activeChatMember(chatId) && resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // Enables each user to list only their own chat memberships via a collection-group query.
+    match /{path=**}/members/{memberUid} {
+      allow list: if signedIn() && request.auth.uid == resource.data.uid;
+    }
+  }
+}

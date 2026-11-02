@@ -1,373 +1,143 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import * as fs from 'fs';
-import * as path from 'path';
-import { calculateEstimatedReportCard } from '../engine/calculator';
-import { simulateAssessments, calculateRequiredScore } from '../engine/simulator';
-import { generateStandardScenarios, calculateMinimumFutureGradesForTargetGA } from '../engine/forecaster';
-import { AppData } from '../types/app';
-import { Assessment, GradingComponent, GradingPeriod } from '../engine/types';
-import { createInitialData } from '../storage/localStore';
+import { PERIODS } from '../engine/periods';
+import { academicOverview, assessmentHistory, compareQuarters, forecastGeneralAverage, gradeRequirements, simulateGrade, subjectGrades, ToolInputError, upcomingAssessments } from './academic';
+import { BackupError, type McpWorkspace } from './backup';
 
 /**
- * File-backed persistence helper for MCP server running in Node/CLI context.
+ * MCP permission categories (PLAN.txt Part III). READ and SIMULATE tools are always available. WRITE tools are
+ * deliberately not implemented: the data source is a read-only backup export, so an AI client cannot change records.
  */
-const DATA_FILE_PATH = path.resolve(process.env.AMPLIFIER_DATA_PATH || './amplifier_data.json');
+export type ToolPermission = 'read' | 'simulate';
 
-function loadData(): AppData {
-  try {
-    if (fs.existsSync(DATA_FILE_PATH)) {
-      const raw = fs.readFileSync(DATA_FILE_PATH, 'utf-8');
-      return JSON.parse(raw);
-    }
-  } catch (err) {
-    console.error('Failed reading data file:', err);
-  }
-  return createInitialData();
+export const TOOL_PERMISSIONS = {
+  get_academic_overview: 'read',
+  get_subject_grades: 'read',
+  get_assessment_history: 'read',
+  get_upcoming_assessments: 'read',
+  simulate_grade: 'simulate',
+  get_grade_requirements: 'simulate',
+  forecast_general_average: 'simulate',
+  compare_quarters: 'simulate',
+} as const satisfies Record<string, ToolPermission>;
+
+export type ServerOptions = {
+  /** Returns the student's records. Called for every tool call, so a newly exported backup is picked up without a restart. */
+  loadWorkspace: () => McpWorkspace | Promise<McpWorkspace>;
+  version?: string;
+};
+
+const component = z.enum(['ww', 'pt', 'exam']).describe('Grading component: ww = Written Works, pt = Performance Tasks, exam = Examination');
+const period = z.string().describe(`Grading period, e.g. ${PERIODS.map(item => `"${item}"`).join(', ')}. Defaults to the current period.`);
+const hypothetical = z.object({
+  component,
+  score: z.number().min(0).describe('Points earned'),
+  maxScore: z.number().positive().describe('Points possible'),
+  title: z.string().optional().describe('Optional label, e.g. "Unit test"'),
+});
+
+function ok(data: unknown): CallToolResult {
+  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 }
 
-function saveData(data: AppData): void {
-  try {
-    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Failed saving data file:', err);
-  }
+function failure(error: unknown): CallToolResult {
+  const message = error instanceof ToolInputError || error instanceof BackupError ? error.message : `AMPlifier could not complete this request: ${error instanceof Error ? error.message : String(error)}`;
+  return { isError: true, content: [{ type: 'text', text: message }] };
 }
 
-export function createAmplifierMcpServer() {
-  const server = new McpServer({
-    name: 'AMPlifier Academic Intelligence Server',
-    version: '1.0.0',
+export function createAmplifierMcpServer({ loadWorkspace, version = '0.2.0' }: ServerOptions): McpServer {
+  const server = new McpServer({ name: 'amplifier', title: 'AMPlifier', version }, {
+    instructions: 'AMPlifier is a student\'s grade tracker. Grades are 0–100. Term grades carry a source: Actual (official report card), Estimated (calculated from recorded assessments) or Projected (an assumption). Use the simulate tools for what-if questions; they never change records. All data is read-only.',
   });
 
-  // 1. Tool: get_academic_overview (READ)
-  server.tool(
-    'get_academic_overview',
-    'Retrieve the user academic overview, current standing, general average, and detected academic weaknesses.',
-    {},
-    async () => {
-      const data = loadData();
-      const reportCard = calculateEstimatedReportCard(
-        data.subjects,
-        data.assessments,
-        data.futureAssumptions
-      );
+  const run = <A>(tool: (ws: McpWorkspace, args: A) => unknown) => async (args: A): Promise<CallToolResult> => {
+    try { return ok(tool(await loadWorkspace(), args)); } catch (error) { return failure(error); }
+  };
+  const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                student: data.user.name,
-                school: data.school.schoolName,
-                gradeLevel: data.school.gradeLevel,
-                section: data.school.section,
-                academicYear: data.school.academicYear,
-                activeQuarter: data.school.activeQuarter,
-                currentGeneralAverage: reportCard.currentGeneralAverage,
-                projectedGeneralAverage: reportCard.projectedGeneralAverage,
-                subjectsCount: data.subjects.length,
-                pendingTasksCount: data.tasks.filter((t) => !t.isCompleted).length,
-                detectedWeaknesses: reportCard.weaknesses,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
+  /* READ */
 
-  // 2. Tool: get_subject_grades (READ)
-  server.tool(
-    'get_subject_grades',
-    'Retrieve estimated quarterly grades, component standing, and projected final grades for a subject or all subjects.',
-    {
-      subjectNameOrId: z.string().optional().describe('Filter by subject name (e.g. Science, English) or subject ID'),
+  server.registerTool('get_academic_overview', {
+    title: 'Academic overview',
+    description: 'Current standing: school and period, current-period and year-to-date general averages, projected final average, target and the average still required, each subject\'s current grade and status, rule-based insights (weak subjects, declines, weakest component), and counts of upcoming work.',
+    annotations: readOnly,
+  }, run(ws => academicOverview(ws)));
+
+  server.registerTool('get_subject_grades', {
+    title: 'Subject grades',
+    description: 'One subject in detail: current grade, component averages with their weights, every term grade with its source (Actual/Estimated/Projected), change from the previous term, and the grade needed per remaining term to reach the saved target.',
+    inputSchema: { subject: z.string().describe('Subject name (case-insensitive) or code') },
+    annotations: readOnly,
+  }, run((ws, args: { subject: string }) => subjectGrades(ws, args.subject)));
+
+  server.registerTool('get_assessment_history', {
+    title: 'Assessment history',
+    description: 'Recorded assessment scores, newest first, with percentages. Filter by subject, period and component.',
+    inputSchema: {
+      subject: z.string().optional().describe('Subject name or code'),
+      period: period.optional(),
+      component: component.optional(),
+      limit: z.number().int().positive().max(500).optional().describe('Maximum number of assessments to return'),
     },
-    async ({ subjectNameOrId }) => {
-      const data = loadData();
-      const reportCard = calculateEstimatedReportCard(
-        data.subjects,
-        data.assessments,
-        data.futureAssumptions
-      );
+    annotations: readOnly,
+  }, run(assessmentHistory));
 
-      let targetSubjects = reportCard.subjects;
-      if (subjectNameOrId) {
-        const query = subjectNameOrId.toLowerCase();
-        targetSubjects = reportCard.subjects.filter(
-          (s) =>
-            s.subjectId.toLowerCase() === query ||
-            s.subjectName.toLowerCase().includes(query)
-        );
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(targetSubjects, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
-  // 3. Tool: get_upcoming_assessments (READ)
-  server.tool(
-    'get_upcoming_assessments',
-    'Retrieve pending academic assignments, quizzes, examinations, and project deadlines.',
-    {
-      onlyPending: z.boolean().default(true).describe('Filter to only uncompleted tasks'),
+  server.registerTool('get_upcoming_assessments', {
+    title: 'Upcoming work',
+    description: 'Open tasks and assessments dated after today, soonest first, including overdue tasks.',
+    inputSchema: {
+      days_ahead: z.number().int().min(0).optional().describe('Only include items due within this many days'),
+      include_overdue: z.boolean().optional().describe('Include overdue tasks (default true)'),
     },
-    async ({ onlyPending }) => {
-      const data = loadData();
-      const tasks = onlyPending ? data.tasks.filter((t) => !t.isCompleted) : data.tasks;
+    annotations: readOnly,
+  }, run((ws, args: { days_ahead?: number; include_overdue?: boolean }) => upcomingAssessments(ws, { daysAhead: args.days_ahead, includeOverdue: args.include_overdue })));
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(tasks, null, 2),
-          },
-        ],
-      };
-    }
-  );
+  /* SIMULATE */
 
-  // 4. Tool: simulate_grade (SIMULATE)
-  server.tool(
-    'simulate_grade',
-    'Perform a hypothetical what-if calculation to test how an assessment score affects subject standing and general average without modifying actual records.',
-    {
-      subjectNameOrId: z.string().describe('Subject name or ID (e.g. Science, English)'),
-      quarter: z.enum(['Q1', 'Q2', 'Q3', 'Q4']).describe('Grading period'),
-      component: z.enum(['WW', 'PT', 'QA']).describe('Component: WW (Written Works), PT (Performance Tasks), QA (Quarterly Exam)'),
-      hypotheticalScore: z.number().describe('Hypothetical score earned'),
-      totalPossible: z.number().describe('Total possible score'),
+  server.registerTool('simulate_grade', {
+    title: 'Simulate a grade',
+    description: 'What-if: the subject\'s grade (and the period\'s general average) if the given hypothetical assessments were added. Uses the student\'s weights and grade scale. Never saves anything.',
+    inputSchema: {
+      subject: z.string().describe('Subject name or code'),
+      period: period.optional(),
+      hypotheticals: z.array(hypothetical).min(1).max(50).describe('Hypothetical assessments to add'),
     },
-    async ({ subjectNameOrId, quarter, component, hypotheticalScore, totalPossible }) => {
-      const data = loadData();
-      const targetSub = data.subjects.find(
-        (s) =>
-          s.id.toLowerCase() === subjectNameOrId.toLowerCase() ||
-          s.name.toLowerCase().includes(subjectNameOrId.toLowerCase())
-      );
+    annotations: readOnly,
+  }, run(simulateGrade));
 
-      if (!targetSub) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Subject "${subjectNameOrId}" not found. Available subjects: ${data.subjects.map((s) => s.name).join(', ')}`,
-            },
-          ],
-        };
-      }
-
-      const hypothetical: Assessment[] = [
-        {
-          id: 'mcp_hypo',
-          subjectId: targetSub.id,
-          quarter: quarter as GradingPeriod,
-          component: component as GradingComponent,
-          title: 'MCP Simulation',
-          score: hypotheticalScore,
-          totalPossible,
-        },
-      ];
-
-      const sim = simulateAssessments(
-        data.subjects,
-        data.assessments,
-        hypothetical,
-        data.futureAssumptions
-      );
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                subject: targetSub.name,
-                quarter,
-                component,
-                hypotheticalAssessment: `${hypotheticalScore}/${totalPossible} (${Math.round((hypotheticalScore / totalPossible) * 100)}%)`,
-                subjectGradeBefore: sim.subjectGradeBefore,
-                subjectGradeAfter: sim.subjectGradeAfter,
-                subjectGradeDelta: sim.subjectGradeDelta,
-                generalAverageBefore: sim.generalAverageBefore,
-                generalAverageAfter: sim.generalAverageAfter,
-                generalAverageDelta: sim.generalAverageDelta,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
-
-  // 5. Tool: get_grade_requirements (SIMULATE)
-  server.tool(
-    'get_grade_requirements',
-    'Calculate the exact minimum score required on an upcoming assessment to achieve a target quarterly grade in a subject.',
-    {
-      subjectNameOrId: z.string().describe('Subject name or ID'),
-      quarter: z.enum(['Q1', 'Q2', 'Q3', 'Q4']).describe('Grading period'),
-      component: z.enum(['WW', 'PT', 'QA']).describe('Component (WW, PT, QA)'),
-      targetQuarterlyGrade: z.number().min(60).max(100).describe('Target quarterly grade (e.g. 90, 95)'),
-      upcomingAssessmentTotal: z.number().min(1).describe('Total points for the upcoming assessment'),
+  server.registerTool('get_grade_requirements', {
+    title: 'Score needed for a target',
+    description: 'Minimum score on one more assessment (out of max_score) for the subject\'s period grade to reach the target, or whether it is already met or out of reach. Also gives the grade needed in each remaining term for the subject\'s final grade to reach the target.',
+    inputSchema: {
+      subject: z.string().describe('Subject name or code'),
+      component,
+      max_score: z.number().positive().describe('Points possible on the next assessment'),
+      target: z.number().min(0).max(100).describe('Target grade (0–100)'),
+      period: period.optional(),
+      pending: z.array(hypothetical).max(50).optional().describe('Other hypothetical assessments to assume first'),
     },
-    async ({ subjectNameOrId, quarter, component, targetQuarterlyGrade, upcomingAssessmentTotal }) => {
-      const data = loadData();
-      const targetSub = data.subjects.find(
-        (s) =>
-          s.id.toLowerCase() === subjectNameOrId.toLowerCase() ||
-          s.name.toLowerCase().includes(subjectNameOrId.toLowerCase())
-      );
+    annotations: readOnly,
+  }, run((ws, args: { subject: string; component: 'ww' | 'pt' | 'exam'; max_score: number; target: number; period?: string; pending?: z.infer<typeof hypothetical>[] }) =>
+    gradeRequirements(ws, { ...args, maxScore: args.max_score })));
 
-      if (!targetSub) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Subject "${subjectNameOrId}" not found.`,
-            },
-          ],
-        };
-      }
-
-      const requirement = calculateRequiredScore(
-        targetSub,
-        quarter as GradingPeriod,
-        component as GradingComponent,
-        targetQuarterlyGrade,
-        data.assessments,
-        upcomingAssessmentTotal
-      );
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(requirement, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
-  // 6. Tool: forecast_general_average (SIMULATE)
-  server.tool(
-    'forecast_general_average',
-    'Generate Conservative, Realistic, and Optimistic forecasting scenarios and calculate minimum future performance for a target general average.',
-    {
-      targetGeneralAverage: z.number().optional().describe('Optional target general average to solve for (e.g. 90, 95)'),
+  server.registerTool('forecast_general_average', {
+    title: 'Forecast general average',
+    description: 'Projected final general average under the conservative, realistic and optimistic scenarios, the student\'s saved assumptions, and optionally custom assumptions for terms that have no grade yet.',
+    inputSchema: {
+      scenario: z.enum(['all', 'saved', 'conservative', 'realistic', 'optimistic']).optional().describe('Which projection to return (default all)'),
+      assumptions: z.record(z.string(), z.record(z.string(), z.number().min(0).max(100))).optional()
+        .describe('Custom assumed grades by subject then period, e.g. {"Mathematics": {"Quarter 4": 92}}'),
     },
-    async ({ targetGeneralAverage }) => {
-      const data = loadData();
-      const scenarios = generateStandardScenarios(data.subjects, data.assessments);
-      const plan = targetGeneralAverage
-        ? calculateMinimumFutureGradesForTargetGA(data.subjects, data.assessments, targetGeneralAverage)
-        : null;
+    annotations: readOnly,
+  }, run(forecastGeneralAverage));
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                scenarios,
-                targetPlan: plan,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
-
-  // 7. Tool: record_score (WRITE)
-  server.tool(
-    'record_score',
-    'Record a new academic score into the user records. (Requires explicit user confirmation).',
-    {
-      subjectNameOrId: z.string().describe('Subject name or ID'),
-      quarter: z.enum(['Q1', 'Q2', 'Q3', 'Q4']).describe('Grading period'),
-      component: z.enum(['WW', 'PT', 'QA']).describe('Component (WW, PT, QA)'),
-      title: z.string().describe('Assessment title (e.g. Quiz 3, Chapter Test)'),
-      score: z.number().describe('Score earned'),
-      totalPossible: z.number().describe('Total possible score'),
-    },
-    async ({ subjectNameOrId, quarter, component, title, score, totalPossible }) => {
-      const data = loadData();
-      const targetSub = data.subjects.find(
-        (s) =>
-          s.id.toLowerCase() === subjectNameOrId.toLowerCase() ||
-          s.name.toLowerCase().includes(subjectNameOrId.toLowerCase())
-      );
-
-      if (!targetSub) {
-        return {
-          content: [{ type: 'text', text: `Error: Subject "${subjectNameOrId}" not found.` }],
-        };
-      }
-
-      const newAssessment: Assessment = {
-        id: `a_${Date.now()}`,
-        subjectId: targetSub.id,
-        quarter: quarter as GradingPeriod,
-        component: component as GradingComponent,
-        title,
-        score,
-        totalPossible,
-        date: new Date().toISOString().split('T')[0],
-      };
-
-      data.assessments.push(newAssessment);
-      saveData(data);
-
-      const updatedReportCard = calculateEstimatedReportCard(
-        data.subjects,
-        data.assessments,
-        data.futureAssumptions
-      );
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                status: 'success',
-                message: `Recorded ${title} (${score}/${totalPossible}) for ${targetSub.name} in ${quarter}.`,
-                newCurrentGeneralAverage: updatedReportCard.currentGeneralAverage,
-                newProjectedGeneralAverage: updatedReportCard.projectedGeneralAverage,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
+  server.registerTool('compare_quarters', {
+    title: 'Compare terms',
+    description: 'Compares two grading periods: general average per term and each subject\'s grade change, with the most improved subject and largest drop. Defaults to the previous term versus the current one.',
+    inputSchema: { from: period.optional(), to: period.optional() },
+    annotations: readOnly,
+  }, run(compareQuarters));
 
   return server;
-}
-
-// Stdio server runner when executed directly
-if (process.argv[1] && process.argv[1].endsWith('server.ts') || process.argv[1]?.endsWith('server.js')) {
-  const server = createAmplifierMcpServer();
-  const transport = new StdioServerTransport();
-  server.connect(transport).catch(console.error);
 }

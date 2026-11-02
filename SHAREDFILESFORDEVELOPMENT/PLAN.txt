@@ -1,0 +1,525 @@
+# AMPlifier
+## Academic Management Platform
+**Project Concept and Feature Specification**
+
+*Your academics, amplified.*
+
+---
+
+# 1. Project Overview
+
+AMPlifier is a desktop-first academic management and analytics platform, with a planned Android application.
+
+It is designed to help students monitor, manage, analyze, simulate, and improve their academic performance through a centralized environment.
+
+The platform combines grade tracking, academic analytics, predictive grade calculations, note management, assessment tracking, and external AI integrations.
+
+Its primary objective is to provide students with a comprehensive understanding of their academic standing while allowing them to make informed decisions about their academic performance.
+
+**AMPlifier is fundamentally an academic management platform, not an AI chatbot.**
+
+Its core functionality operates independently of AI integrations. External AI systems can optionally connect through the Model Context Protocol (MCP) to access authorized academic information and perform experiments using the platform's capabilities.
+
+# PART I — BASE FEATURES
+
+## 2. Platform Availability
+
+- Desktop application — primary development target.
+- Android application — planned secondary platform.
+- Account-based access.
+- User-specific academic records and configurations.
+- Google Drive-based storage infrastructure.
+
+## 3. Account and School Configuration
+
+Upon opening AMPlifier for the first time, users will be prompted to create an account.
+
+Users can configure their academic information, including:
+
+- School name.
+- Grade level.
+- Section.
+- Academic year.
+- Grading system template.
+
+The initial target audience is a small, controlled group of users, primarily the developer and their friends.
+
+Google Drive is initially intended to serve as part of the storage infrastructure.
+
+## 4. Grading System Templates
+
+Users will select a grading template during initial setup.
+
+The default template will follow the developer's school's grading system.
+
+### Default Subjects
+
+1. Filipino
+2. English
+3. Science
+4. ESP
+5. Araling Panlipunan
+6. TLE
+7. Computer
+8. MAPEH
+
+Users should be able to customize subjects according to their school's curriculum.
+
+### Grading Components
+
+Each subject will have configurable grading percentages for:
+
+- Written Works (WW)
+- Performance Tasks (PT)
+- Examination
+
+The percentages determine how individual grading components contribute to the overall quarterly or semester grade.
+
+Templates should support customization to accommodate different schools and grading systems.
+
+## 5. Daily Score Tracking
+
+Users can record academic scores throughout each grading period.
+
+Supported entries include:
+
+- Quizzes.
+- Written activities.
+- Seatworks.
+- Assignments.
+- Other Written Works assessments.
+- Performance Tasks.
+- Examinations.
+
+Each entry will be associated with its corresponding subject, grading component, and grading period.
+
+### Automatic Grade Recalculation
+
+Whenever a score is entered, modified, or deleted, AMPlifier will automatically recalculate affected grades.
+
+This includes:
+
+- Updated Written Works standing.
+- Updated Performance Tasks standing.
+- Updated Examination standing.
+- Updated estimated quarterly or semester grade.
+- Updated projected report card.
+- Updated projected general average.
+
+## 6. Academic Analytics and Visualization
+
+AMPlifier will provide graphical representations of academic performance.
+
+Planned visualization types:
+
+- Line graphs.
+- Pie charts.
+- Bar graphs.
+- Performance comparison charts.
+- Historical grade trends.
+
+Users can view their performance across different subjects, grading components, and grading periods.
+
+## 7. Notes Management
+
+Users can import and organize academic notes.
+
+Notes will be categorized by:
+
+- Subject.
+- Quarter or semester.
+- Academic year.
+
+The objective is to provide centralized and easily accessible academic materials.
+
+## 8. Estimated Report Card and General Average
+
+One of AMPlifier's central features.
+
+Users will have access to a continuously updated estimated report card.
+
+The application will calculate:
+
+- Estimated grades per subject.
+- Quarterly or semester averages.
+- Historical academic averages.
+- Projected final general average.
+
+### Future Grade Assumptions
+
+Users can specify assumed minimum grades for future quarters or semesters.
+
+These assumptions will be used to calculate a projected final general average.
+
+The projection automatically updates whenever current scores or future assumptions change.
+
+Actual grades, estimated grades, and projected grades must remain distinguishable.
+
+# PART II — ADDITIONAL FEATURES
+
+*Proposed expansions to the original application concept.*
+
+## 9. Grade Simulator
+
+An interactive system for simulating hypothetical academic scores.
+
+Users can experiment with potential scores and immediately see their effects on their academic standing.
+
+Examples:
+
+- What happens if I get 18/20 on my next Science quiz?
+- What score do I need to achieve a 95 in English?
+- How much will my general average change if I improve my MAPEH grade?
+- What happens if I perform poorly on the next examination?
+
+The simulator must calculate hypothetical results without modifying actual academic records.
+
+## 10. Advanced Grade Forecasting
+
+An expansion of the existing future grade assumption system.
+
+Users can create multiple forecasting scenarios:
+
+- Conservative scenario.
+- Realistic scenario.
+- Optimistic scenario.
+- Custom scenario.
+
+Each scenario will have its own assumed future grades and projected final general average.
+
+Users can compare scenarios through charts and tables.
+
+The application may also calculate the minimum future grades necessary to achieve a particular general average target.
+
+## 11. Academic Weakness Detection
+
+An analytical system that identifies areas where students may need improvement.
+
+Potential detection categories:
+
+- Declining subject performance.
+- Inconsistent assessment results.
+- Weak Written Works performance.
+- Weak Performance Task performance.
+- Low examination scores.
+- Subjects with the greatest negative impact on general average.
+
+The system can provide explanations and recommendations regarding which areas deserve more attention.
+
+## 12. Assignment and Assessment Tracker
+
+A centralized academic task management system.
+
+Users can record:
+
+- Upcoming quizzes.
+- Examinations.
+- Projects.
+- Performance Tasks.
+- Homework.
+- Assignment deadlines.
+- Submission schedules.
+
+Each task can have:
+
+- Subject association.
+- Description.
+- Deadline.
+- Priority.
+- Completion status.
+
+A calendar interface will provide an overview of upcoming academic responsibilities.
+
+## 13. Spaced Repetition and Flashcards
+
+A built-in flashcard system designed to improve information retention.
+
+Users can create flashcards manually or generate them from imported notes.
+
+The application will schedule reviews according to the user's recall performance.
+
+Potential features:
+
+- Flashcard creation.
+- Automatic review scheduling.
+- Difficulty ratings.
+- Subject-based collections.
+- Review history.
+- Learning progress statistics.
+
+## 14. Study Session Analytics
+
+A system for monitoring study habits.
+
+Users can record study sessions and associate them with specific subjects.
+
+Statistics may include:
+
+- Total study time.
+- Weekly study hours.
+- Study time per subject.
+- Study session frequency.
+- Study consistency.
+- Historical study activity.
+
+These statistics may be compared with academic performance to identify possible patterns.
+
+## 15. AI-Generated Reviewers
+
+An optional AI-powered study material generation system.
+
+Using imported notes and academic references, external AI integrations can generate:
+
+- Multiple-choice examinations.
+- Identification exercises.
+- True or False questions.
+- Enumeration exercises.
+- Essay questions.
+- Flashcards.
+- Practice examinations.
+- Answer keys and explanations.
+
+Users may configure the subject, topic, difficulty, and number of questions.
+
+## 16. AI Academic Reports
+
+An optional AI-assisted reporting system.
+
+Reports may be generated after each quarter or semester.
+
+They can include:
+
+- Subject-by-subject analysis.
+- Grade comparisons.
+- Performance improvements and declines.
+- Strongest and weakest grading components.
+- General average projections.
+- AI-generated interpretations.
+- Recommendations for future improvement.
+
+Reports must distinguish actual recorded grades from estimated and projected grades.
+
+## 17. Additional Quality-of-Life Features
+
+| Feature | Description |
+|---|---|
+| Achievement System | Academic milestones and accomplishments |
+| Grade History | Historical records of previous grading periods |
+| Data Export | Export reports to PDF, CSV, and Excel |
+| Dark Mode | Alternative application appearance |
+| Subject Color Coding | Visual identification of subjects |
+| Global Search | Search notes, records, assessments, and tasks |
+| Backup and Restore | Recovery of academic records |
+| Change History | Track modifications to scores and academic information |
+| Target Grades | Set desired grades for individual subjects |
+| Notifications | Reminders for upcoming assessments and deadlines |
+
+# PART III — MCP AND EXTERNAL AI INTEGRATION
+
+## 18. Model Context Protocol (MCP)
+
+MCP is one of AMPlifier's major architectural features.
+
+However, AMPlifier will not initially contain its own AI chat interface.
+
+Instead, it will expose selected application functionality through an MCP server, allowing compatible external AI clients to connect and interact with the user's academic data.
+
+Potential supported clients include Claude and other MCP-compatible AI systems.
+
+### Core Philosophy
+
+AMPlifier owns and manages the academic information.
+
+External AI systems can access authorized information and utilize the application's available functionality.
+
+The AI is an optional extension rather than a requirement for the platform to operate.
+
+### Potential MCP Tools
+
+| Tool | Function |
+|---|---|
+| `get_academic_overview` | Retrieve the user's academic overview |
+| `get_subject_grades` | Retrieve grades for a specific subject |
+| `get_assessment_history` | Retrieve historical assessment scores |
+| `get_notes` | Retrieve relevant academic notes |
+| `get_upcoming_assessments` | Retrieve upcoming academic responsibilities |
+| `simulate_grade` | Experiment with hypothetical assessment scores |
+| `forecast_general_average` | Calculate projected general averages |
+| `compare_quarters` | Compare academic performance across quarters |
+| `get_grade_requirements` | Calculate the scores needed to reach a target grade |
+
+These are proposed tool names and capabilities, subject to implementation.
+
+### AI-Driven Academic Experimentation
+
+One of the most interesting applications of MCP is allowing external AI systems to perform experiments using AMPlifier's academic data.
+
+Examples:
+
+- What would happen to my general average if I scored 95 in every remaining assessment?
+- Find the minimum grades I need in future quarters to achieve a 95 general average.
+- Compare several possible academic performance scenarios.
+- Determine which grading component has the greatest effect on my final grade.
+- Identify the most effective way to improve my overall academic standing.
+- Analyze historical assessment results and identify patterns.
+
+The AI can use AMPlifier's calculation and simulation tools to obtain accurate results, then interpret and explain those results.
+
+### MCP Permission Categories
+
+MCP access should be divided into three categories:
+
+**READ**
+- Retrieve academic records.
+- View grades.
+- Access authorized notes.
+- Retrieve academic statistics.
+
+**SIMULATE**
+- Perform hypothetical grade calculations.
+- Test alternative future grade assumptions.
+- Compare academic scenarios.
+- Generate projections without changing actual records.
+
+**WRITE**
+- Add or modify assessment records.
+- Change academic configurations.
+- Modify other stored information.
+
+Write operations should require explicit authorization.
+
+### Future Possibilities
+
+The MCP implementation could eventually allow external AI systems to perform more advanced academic analysis without requiring AMPlifier to implement its own conversational AI interface.
+
+# PART IV — OPTIONAL INTEGRATIONS
+
+## 19. Google NotebookLM
+
+An optional integration with Google NotebookLM.
+
+NotebookLM can serve as an additional study and research assistant using the user's imported academic materials.
+
+This integration is considered valuable but is not required for AMPlifier's core functionality.
+
+## 20. Google Drive
+
+Google Drive is initially intended to serve as part of the storage infrastructure.
+
+Potential uses:
+
+- Storing imported notes and documents.
+- Backing up academic records.
+- Storing exported reports.
+- Synchronizing supported user files.
+
+The storage architecture should account for multiple users, permissions, synchronization, and accidental data overwrites.
+
+A dedicated database may be introduced if the application expands beyond its initial small user base.
+
+# PART V — APPLICATION EXPERIENCE
+
+## 21. Academic Command Center
+
+The proposed main dashboard.
+
+It will serve as AMPlifier's central information hub, displaying important academic information upon opening the application.
+
+### Dashboard Components
+
+**Academic Overview**
+- Current grading period.
+- Current general average.
+- Projected final general average.
+- Academic year information.
+
+**Subject Performance**
+- Current estimated grades.
+- Subject comparisons.
+- Performance indicators.
+
+**Academic Insights**
+- Strongest subjects.
+- Subjects needing attention.
+- Changes in academic performance.
+- Important grade projections.
+
+**Upcoming Assessments**
+- Pending quizzes.
+- Upcoming examinations.
+- Performance Task deadlines.
+- Assignment reminders.
+
+**Quick Actions**
+- Enter a new score.
+- Import notes.
+- Start a study session.
+- Open the grade simulator.
+- Access academic analytics.
+
+# PART VI — DEVELOPMENT CONSIDERATIONS
+
+## 22. Data Management
+
+The initial storage infrastructure will utilize Google Drive.
+
+However, the implementation should distinguish between:
+
+- Application data and academic records.
+- Uploaded notes and other files.
+- Backup files.
+- Generated reports.
+
+A proper data management layer should prevent synchronization conflicts, accidental overwrites, and unauthorized access.
+
+Google Drive may be retained for file storage and backups, while a dedicated database can be considered for structured academic records.
+
+## 23. Grade Calculation Engine
+
+Grade calculations must be handled by AMPlifier's own deterministic calculation engine rather than relying on AI-generated arithmetic.
+
+The engine should support:
+
+- Configurable grading weights.
+- Different grading templates.
+- Incomplete grading periods.
+- Different assessment types.
+- Actual versus estimated grades.
+- Future grade projections.
+- Historical records.
+- Hypothetical simulations.
+
+## 24. Integration Architecture
+
+The application should support optional external integrations.
+
+Potential integrations include:
+
+- Claude through MCP.
+- Other MCP-compatible AI clients.
+- Google NotebookLM.
+- Google Drive.
+- Future academic and productivity services.
+
+The fundamental functionality of AMPlifier must remain available even without these integrations.
+
+---
+
+# PROJECT VISION
+
+AMPlifier aims to become a comprehensive academic management and intelligence platform.
+
+It should function as a centralized environment where students can:
+
+1. Monitor their academic performance.
+2. Manage grades and assessments.
+3. Predict and simulate future academic outcomes.
+4. Organize notes and learning materials.
+5. Manage academic responsibilities.
+6. Study using integrated learning tools.
+7. Connect external AI systems to their academic information.
+8. Experiment with different academic scenarios using real data and deterministic calculations.
+
+**AMPlifier is designed to amplify the way students manage, understand, and interact with their academics.**
+
+*Your academics, amplified.*

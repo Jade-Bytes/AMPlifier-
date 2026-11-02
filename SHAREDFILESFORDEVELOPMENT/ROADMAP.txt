@@ -1,0 +1,612 @@
+# AMPlifier — Development Roadmap
+**Academic Management Platform**
+
+*Development Strategy, Milestones, and Implementation Plan*
+
+---
+
+# DEVELOPMENT STRATEGY
+
+AMPlifier will be developed incrementally, prioritizing foundational systems before advanced functionality.
+
+The development process is divided into three major milestones:
+
+| Milestone | Objective |
+|---|---|
+| MVP | Establish a fully functional academic management application |
+| Desktop Feature Completion | Implement analytics, academic management, MCP, and integrations |
+| Cross-Platform Release | Introduce Android support and broader distribution |
+
+The desktop application is the primary development target. Android development will begin after the core application architecture has stabilized.
+
+# PHASE 0 — PLANNING AND ARCHITECTURE
+
+**Objective:** Establish the technical foundation and define how the application will operate.
+
+### Tasks
+
+- [ ] Finalize the application concept and feature specifications.
+- [ ] Select the desktop development framework.
+- [ ] Select the programming language and supporting technologies.
+- [ ] Design the application architecture.
+- [ ] Design the database schema.
+- [ ] Plan the Google Drive storage infrastructure.
+- [ ] Define account and authentication requirements.
+- [ ] Define the grading calculation methodology.
+- [ ] Plan the UI/UX design and navigation.
+- [ ] Establish coding conventions and project structure.
+- [ ] Establish version control and backup procedures.
+
+### Important architectural decisions
+
+The application should use a modular architecture.
+
+Suggested modules:
+
+1. Authentication
+2. User Management
+3. School Configuration
+4. Subject Management
+5. Grading Engine
+6. Academic Records
+7. Analytics
+8. Notes Management
+9. MCP Server
+10. External Integrations
+
+### Completion criteria
+
+- Architecture documented.
+- Technology stack selected.
+- Initial database schema designed.
+- Application development environment ready.
+
+---
+
+# PHASE 1 — CORE FOUNDATION
+
+**Objective:** Build the desktop application's basic structure and user management functionality.
+
+### 1.1 Desktop Application Shell
+
+- [ ] Create the desktop application.
+- [ ] Implement the main window.
+- [ ] Establish the navigation system.
+- [ ] Create the initial dashboard layout.
+- [ ] Implement application settings.
+- [ ] Establish a consistent design system.
+
+### 1.2 Account System
+
+- [ ] Registration interface.
+- [ ] Login interface.
+- [ ] Account management.
+- [ ] User-specific data organization.
+- [ ] Session management.
+- [ ] Basic account validation.
+
+### 1.3 Storage Infrastructure
+
+- [ ] Establish Google Drive integration.
+- [ ] Create user-specific storage structures.
+- [ ] Implement basic data saving.
+- [ ] Implement data retrieval.
+- [ ] Implement backup functionality.
+- [ ] Handle synchronization errors.
+
+### 1.4 School Configuration
+
+- [ ] School name configuration.
+- [ ] Grade level configuration.
+- [ ] Section configuration.
+- [ ] Academic year configuration.
+- [ ] Grading template selection.
+
+### Completion criteria
+
+A user can register, log in, configure their academic information, and retain their settings between sessions.
+
+**MILESTONE: Initial Desktop Application**
+
+---
+
+# PHASE 2 — GRADING ENGINE
+
+**Objective:** Implement the most important functionality of AMPlifier: academic record management and grade calculations.
+
+### 2.1 Subject Management
+
+- [ ] Implement default subjects.
+- [ ] Add custom subjects.
+- [ ] Remove subjects.
+- [ ] Rename subjects.
+- [ ] Configure subject-specific grading weights.
+- [ ] Support multiple grading templates.
+
+### 2.2 Assessment Management
+
+- [ ] Create assessments.
+- [ ] Record assessment scores.
+- [ ] Configure maximum possible scores.
+- [ ] Assign assessments to grading components.
+- [ ] Edit existing scores.
+- [ ] Delete assessments.
+- [ ] Organize assessments by quarter or semester.
+
+### 2.3 Grading Calculation Engine
+
+- [ ] Written Works calculation.
+- [ ] Performance Tasks calculation.
+- [ ] Examination calculation.
+- [ ] Weighted grade calculation.
+- [ ] Quarterly grade calculation.
+- [ ] Semester grade calculation where applicable.
+- [ ] General average calculation.
+- [ ] Support incomplete grading periods.
+- [ ] Support configurable grading rules.
+
+### 2.4 Estimated Report Card
+
+- [ ] Generate estimated report cards.
+- [ ] Display individual subject grades.
+- [ ] Calculate quarterly averages.
+- [ ] Calculate projected final general averages.
+- [ ] Implement future grade assumptions.
+- [ ] Automatically recalculate affected grades after changes.
+
+### 2.5 Calculation Validation
+
+- [ ] Test weighted grade calculations.
+- [ ] Test incomplete assessment records.
+- [ ] Test score modifications.
+- [ ] Test different grading templates.
+- [ ] Verify rounding and grading rules.
+- [ ] Compare calculations against manually verified examples.
+
+### Completion criteria
+
+A user can manage academic records and receive automatically updated estimated grades and report cards.
+
+**MILESTONE: Functional Academic Management MVP**
+
+At this point, AMPlifier should already be useful as a standalone application.
+
+---
+
+# PHASE 3 — ANALYTICS AND PREDICTIVE SYSTEMS
+
+**Objective:** Transform academic records into useful statistics, projections, and simulations.
+
+### 3.1 Academic Analytics
+
+- [ ] Subject performance charts.
+- [ ] Quarterly performance charts.
+- [ ] Written Works analytics.
+- [ ] Performance Task analytics.
+- [ ] Examination analytics.
+- [ ] Historical grade comparisons.
+- [ ] General average trends.
+
+### 3.2 Grade Simulator
+
+- [ ] Hypothetical assessment score inputs.
+- [ ] Simulated Written Works results.
+- [ ] Simulated Performance Task results.
+- [ ] Simulated Examination results.
+- [ ] Simulated quarterly grades.
+- [ ] Simulated general averages.
+- [ ] Preserve actual records when simulating.
+
+### 3.3 Advanced Grade Forecasting
+
+- [ ] Conservative projections.
+- [ ] Realistic projections.
+- [ ] Optimistic projections.
+- [ ] Custom projection scenarios.
+- [ ] Scenario comparison charts.
+- [ ] Target general average calculator.
+- [ ] Minimum required future grades calculator.
+
+### 3.4 Academic Weakness Detection
+
+- [ ] Identify declining subjects.
+- [ ] Identify inconsistent assessment results.
+- [ ] Identify weak grading components.
+- [ ] Compare subject performance.
+- [ ] Identify opportunities for grade improvement.
+- [ ] Generate statistical insights.
+
+### Completion criteria
+
+Users can visualize academic performance, simulate possible outcomes, and forecast future grades.
+
+**MILESTONE: Academic Intelligence System**
+
+---
+
+# PHASE 4 — ACADEMIC MANAGEMENT
+
+**Objective:** Expand AMPlifier beyond grade tracking by introducing study and academic organization tools.
+
+### 4.1 Notes Management
+
+- [ ] Import notes.
+- [ ] Support common document formats.
+- [ ] Organize notes by subject.
+- [ ] Organize notes by quarter or semester.
+- [ ] Implement note search.
+- [ ] Implement document viewing.
+- [ ] Implement note deletion and replacement.
+
+### 4.2 Assignment and Assessment Tracker
+
+- [ ] Create academic tasks.
+- [ ] Configure deadlines.
+- [ ] Assign subjects.
+- [ ] Set priorities.
+- [ ] Track completion status.
+- [ ] Create a calendar interface.
+- [ ] Display upcoming deadlines.
+
+### 4.3 Study Session Analytics
+
+- [ ] Record study sessions.
+- [ ] Associate sessions with subjects.
+- [ ] Track total study time.
+- [ ] Generate weekly statistics.
+- [ ] Generate subject-specific statistics.
+- [ ] Display study history.
+
+### 4.4 Flashcards and Spaced Repetition
+
+- [ ] Create flashcards.
+- [ ] Organize flashcard collections.
+- [ ] Implement review sessions.
+- [ ] Record recall difficulty.
+- [ ] Implement review scheduling.
+- [ ] Track learning progress.
+
+### Completion criteria
+
+AMPlifier can manage both academic performance and everyday academic responsibilities.
+
+---
+
+# PHASE 5 — MCP INTEGRATION
+
+**Objective:** Allow external AI systems to interact with AMPlifier through the Model Context Protocol.
+
+This phase is particularly important because MCP is intended to be a major extension of the application.
+
+### 5.1 MCP Server Foundation
+
+- [ ] Research the MCP specification.
+- [ ] Implement an MCP server.
+- [ ] Connect MCP to AMPlifier's internal services.
+- [ ] Implement tool registration.
+- [ ] Implement tool execution.
+- [ ] Implement structured responses.
+- [ ] Implement error handling.
+
+### 5.2 Read Tools
+
+- [ ] Retrieve academic overview.
+- [ ] Retrieve subject grades.
+- [ ] Retrieve assessment history.
+- [ ] Retrieve notes.
+- [ ] Retrieve upcoming assessments.
+- [ ] Retrieve academic statistics.
+
+### 5.3 Simulation Tools
+
+- [ ] Simulate hypothetical scores.
+- [ ] Forecast general averages.
+- [ ] Compare grading scenarios.
+- [ ] Calculate target grade requirements.
+- [ ] Analyze alternative academic outcomes.
+
+### 5.4 Write Tools
+
+- [ ] Add academic records.
+- [ ] Modify assessment information.
+- [ ] Modify supported academic configurations.
+- [ ] Implement explicit write authorization.
+- [ ] Implement confirmation requirements.
+
+### 5.5 AI Client Compatibility
+
+- [ ] Test Claude connectivity.
+- [ ] Test MCP tool discovery.
+- [ ] Test tool execution.
+- [ ] Test structured data retrieval.
+- [ ] Test hypothetical academic experiments.
+- [ ] Test permission restrictions.
+
+### 5.6 Security and Permissions
+
+Establish three permission categories:
+
+- READ — retrieve information.
+- SIMULATE — perform hypothetical experiments.
+- WRITE — modify actual records.
+
+Write operations must require explicit authorization.
+
+MCP connections must also respect user-specific access boundaries. A user's AI client must never be able to retrieve another user's academic information.
+
+### Completion criteria
+
+An external MCP-compatible AI client can connect to AMPlifier, retrieve authorized academic information, and perform grade simulations without requiring an internal AI chat interface.
+
+**MILESTONE: External AI Connectivity**
+
+---
+
+# PHASE 6 — OPTIONAL AI AND EXTERNAL INTEGRATIONS
+
+**Objective:** Expand the capabilities of AMPlifier through external services.
+
+### 6.1 NotebookLM Integration
+
+- [ ] Research available integration options.
+- [ ] Determine supported import/export workflows.
+- [ ] Establish a method of transferring academic materials.
+- [ ] Test compatibility with organized notes.
+
+### 6.2 AI-Generated Reviewers
+
+- [ ] Establish an AI-assisted reviewer generation workflow.
+- [ ] Generate multiple-choice questions.
+- [ ] Generate identification exercises.
+- [ ] Generate true or false questions.
+- [ ] Generate enumeration exercises.
+- [ ] Generate essay questions.
+- [ ] Generate flashcards.
+- [ ] Generate answer keys and explanations.
+
+### 6.3 AI Academic Reports
+
+- [ ] Generate quarterly academic reports.
+- [ ] Generate semester reports.
+- [ ] Interpret academic trends.
+- [ ] Identify possible weaknesses.
+- [ ] Generate improvement recommendations.
+- [ ] Export generated reports.
+
+These features may use external MCP-compatible AI systems or separately configured AI integrations.
+
+### Completion criteria
+
+AMPlifier supports optional external AI-assisted study workflows without becoming dependent on a built-in AI chatbot.
+
+---
+
+# PHASE 7 — ANDROID DEVELOPMENT
+
+**Objective:** Bring AMPlifier to Android while maintaining compatibility with the desktop application.
+
+Android development should begin once the core data structures, calculation engine, and application services are stable.
+
+### 7.1 Mobile Architecture
+
+- [ ] Determine the Android development framework.
+- [ ] Establish shared data models.
+- [ ] Implement synchronization.
+- [ ] Establish mobile authentication.
+- [ ] Adapt application services for mobile use.
+
+### 7.2 Mobile Interface
+
+- [ ] Mobile dashboard.
+- [ ] Subject management.
+- [ ] Score entry.
+- [ ] Report card viewing.
+- [ ] Analytics viewing.
+- [ ] Notes access.
+- [ ] Assessment calendar.
+- [ ] Application settings.
+
+### 7.3 Cross-Platform Synchronization
+
+- [ ] Synchronize academic records.
+- [ ] Synchronize notes and documents.
+- [ ] Synchronize assessment information.
+- [ ] Handle simultaneous modifications.
+- [ ] Handle offline changes where supported.
+- [ ] Test desktop-to-Android synchronization.
+- [ ] Test Android-to-desktop synchronization.
+
+### Completion criteria
+
+Users can access and manage their academic information through both desktop and Android applications.
+
+**MILESTONE: Cross-Platform AMPlifier**
+
+---
+
+# PHASE 8 — TESTING, OPTIMIZATION, AND RELEASE
+
+**Objective:** Prepare AMPlifier for distribution to its intended users.
+
+### 8.1 Testing
+
+- [ ] Test registration and authentication.
+- [ ] Test academic record persistence.
+- [ ] Test grading calculations.
+- [ ] Test grade simulations.
+- [ ] Test analytics.
+- [ ] Test document imports.
+- [ ] Test MCP connectivity.
+- [ ] Test permission restrictions.
+- [ ] Test synchronization.
+- [ ] Test recovery from application errors.
+
+### 8.2 Performance Optimization
+
+- [ ] Optimize application startup.
+- [ ] Optimize database operations.
+- [ ] Optimize chart rendering.
+- [ ] Optimize document loading.
+- [ ] Optimize synchronization.
+- [ ] Reduce unnecessary resource consumption.
+
+### 8.3 User Experience
+
+- [ ] Refine navigation.
+- [ ] Improve interface consistency.
+- [ ] Add loading indicators.
+- [ ] Add useful error messages.
+- [ ] Improve accessibility.
+- [ ] Conduct usability testing.
+
+### 8.4 Distribution
+
+- [ ] Prepare desktop installation packages.
+- [ ] Prepare Android installation package.
+- [ ] Create application documentation.
+- [ ] Prepare initial user onboarding.
+- [ ] Establish update procedures.
+- [ ] Release to the initial user group.
+
+### Completion criteria
+
+AMPlifier is stable, usable, documented, and ready for its intended audience.
+
+---
+
+# DEVELOPMENT PRIORITIES
+
+Not every feature should receive equal priority.
+
+The following table establishes the recommended implementation order.
+
+| Priority | Feature | Importance |
+|---|---|---|
+| P0 | Grading Engine | Critical |
+| P0 | Data Management | Critical |
+| P0 | Account System | Critical |
+| P0 | School Configuration | Critical |
+| P0 | Estimated Report Card | Critical |
+| P1 | Analytics | High |
+| P1 | Grade Simulator | High |
+| P1 | Grade Forecasting | High |
+| P1 | MCP Integration | High |
+| P2 | Notes Management | Medium |
+| P2 | Assignment Tracker | Medium |
+| P2 | AI Integrations | Medium |
+| P2 | Flashcards | Medium |
+| P3 | Android Application | Expansion |
+| P3 | Additional Quality-of-Life Features | Expansion |
+
+P0 features establish the foundation. P1 features expand the main academic intelligence functionality. P2 and P3 features introduce additional capabilities and platform expansion.
+
+---
+
+# SUGGESTED FIRST RELEASE
+
+The first public or friend-group release should not attempt to contain everything.
+
+### AMPlifier v1.0 — Academic Management MVP
+
+The initial release should contain:
+
+1. Account registration and login.
+2. School and academic configuration.
+3. Grading templates.
+4. Subject management.
+5. Daily score tracking.
+6. Automatic grade calculations.
+7. Estimated report cards.
+8. General average projections.
+9. Basic charts.
+10. Data persistence and backup.
+
+This is enough to make AMPlifier a genuinely useful application.
+
+### AMPlifier v1.1 — Academic Intelligence
+
+- Advanced analytics.
+- Grade simulator.
+- Advanced forecasting.
+- Academic weakness detection.
+
+### AMPlifier v1.2 — Academic Organization
+
+- Notes management.
+- Assignment tracker.
+- Study session analytics.
+- Flashcards and spaced repetition.
+
+### AMPlifier v1.3 — MCP Connectivity
+
+- MCP server.
+- Read tools.
+- Simulation tools.
+- Write tools and authorization.
+- Claude compatibility.
+
+### AMPlifier v1.4 — Extended Intelligence
+
+- NotebookLM workflows.
+- AI-generated reviewers.
+- AI academic reports.
+
+### AMPlifier v2.0 — Cross-Platform Expansion
+
+- Android application.
+- Cross-platform synchronization.
+- Improved integrations.
+- Expanded distribution.
+
+Version numbers are proposed milestones, not fixed release commitments.
+
+---
+
+# DEVELOPMENT RULES
+
+The following principles should guide the entire development process.
+
+**1. Accuracy before features.**
+
+The grading engine must be reliable before advanced analytics and AI experimentation are introduced.
+
+**2. Modular architecture.**
+
+Each major subsystem should be independently maintainable and extensible.
+
+**3. AI is optional.**
+
+AMPlifier must remain fully functional without Claude, NotebookLM, or other external AI services.
+
+**4. One source of truth.**
+
+Desktop, Android, and MCP should access the same underlying academic records and calculation logic.
+
+**5. Protect actual records.**
+
+Simulations must never accidentally modify real academic data. External write operations require authorization.
+
+**6. Test every major subsystem.**
+
+Especially grade calculations, data persistence, synchronization, and MCP permissions.
+
+**7. Build incrementally.**
+
+A completed and tested feature is preferable to several unfinished systems.
+
+---
+
+# FINAL DEVELOPMENT OBJECTIVE
+
+The long-term goal is to establish AMPlifier as a comprehensive academic management platform that combines:
+
+- Academic record management.
+- Grade analytics and forecasting.
+- Academic organization.
+- Learning management tools.
+- External AI interoperability.
+- Cross-platform accessibility.
+
+The development process should prioritize a reliable desktop foundation, expand into academic intelligence, introduce MCP connectivity, and eventually bring the entire experience to Android.
+
+**AMPlifier — Your academics, amplified.**

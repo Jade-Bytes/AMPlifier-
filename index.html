@@ -1,14 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AMPlifier — Academic Management Platform</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#080c1b" />
+    <meta name="description" content="AMPlifier — track grades, forecast your general average, and organize schoolwork." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400..800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" />
+    <script>
+      // Apply the saved theme before first paint so the page never flashes the wrong colours.
+      try {
+        var prefs = JSON.parse(localStorage.getItem('amplifier-preferences') || '{}');
+        var theme = prefs.theme === 'light' || prefs.theme === 'dark' ? prefs.theme : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.dataset.theme = theme;
+      } catch (error) { document.documentElement.dataset.theme = 'dark'; }
+    </script>
+    <title>AMPlifier — Your academics, amplified.</title>
   </head>
-  <body class="bg-slate-900 text-slate-100 antialiased selection:bg-brand-500 selection:text-white font-['Plus_Jakarta_Sans',sans-serif]">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

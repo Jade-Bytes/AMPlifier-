@@ -1,376 +1,148 @@
-import {
-  Assessment,
-  ComponentResult,
-  ComponentWeight,
-  GradingPeriod,
-  QuarterlySubjectResult,
-  AnnualSubjectResult,
-  Subject,
-  EstimatedReportCard,
-  AcademicWeakness,
-} from './types';
-import { transmuteGrade } from './transmutation';
+import type { Assessment, GradeComponent, GradeOptions, GradingWeights, Subject, SubjectGradingWeights } from '../types/app';
+import { transmuteDepEd } from './transmutation';
 
-const ALL_QUARTERS: GradingPeriod[] = ['Q1', 'Q2', 'Q3', 'Q4'];
+export const DEFAULT_GRADING_WEIGHTS: GradingWeights = { ww: 30, pt: 50, exam: 20 };
+export const COMPONENTS: readonly GradeComponent[] = ['ww', 'pt', 'exam'];
+export const COMPONENT_LABELS: Record<GradeComponent, string> = { ww: 'Written Works', pt: 'Performance Tasks', exam: 'Examination' };
+export const COMPONENT_SHORT: Record<GradeComponent, string> = { ww: 'WW', pt: 'PT', exam: 'Exam' };
+const BASELINE_POSSIBLE_POINTS = 100;
+/** Weights are entered as whole or decimal percentages; allow tiny float error when checking the total. */
+const WEIGHT_TOTAL_TOLERANCE = 0.01;
+
+export function componentFromLabel(value: unknown): GradeComponent | null {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'ww' || normalized.includes('written')) return 'ww';
+  if (normalized === 'pt' || normalized.includes('performance')) return 'pt';
+  if (normalized === 'exam' || normalized.includes('examination') || normalized === 'exams') return 'exam';
+  return null;
+}
+
+export function weightsTotal(weights: GradingWeights): number {
+  return weights.ww + weights.pt + weights.exam;
+}
+
+export function weightsAreValid(weights: GradingWeights): boolean {
+  return COMPONENTS.every(key => Number.isFinite(weights[key]) && weights[key] >= 0 && weights[key] <= 100)
+    && Math.abs(weightsTotal(weights) - 100) <= WEIGHT_TOTAL_TOLERANCE;
+}
+
+export function normalizeWeights(value: unknown): GradingWeights {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_GRADING_WEIGHTS };
+  const candidate = value as Record<string, unknown>;
+  const weights = { ww: Number(candidate.ww), pt: Number(candidate.pt), exam: Number(candidate.exam) };
+  return weightsAreValid(weights) ? weights : { ...DEFAULT_GRADING_WEIGHTS };
+}
+
+export function normalizeSubjectWeights(value: unknown, subjects: Pick<Subject, 'name'>[]): SubjectGradingWeights {
+  if (!value || typeof value !== 'object') return Object.fromEntries(subjects.map(subject => [subject.name, { ...DEFAULT_GRADING_WEIGHTS }]));
+  const candidate = value as Record<string, unknown>;
+  const looksLikeSingleTemplate = 'ww' in candidate || 'pt' in candidate || 'exam' in candidate;
+  return Object.fromEntries(subjects.map(subject => [subject.name,
+    looksLikeSingleTemplate ? normalizeWeights(candidate) : normalizeWeights(candidate[subject.name]),
+  ]));
+}
+
+export function scoreAsPercent(score: number, maxScore: number): number {
+  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) return 0;
+  return Math.max(0, Math.min(100, (score / maxScore) * 100));
+}
 
 /**
- * Calculates the score standing for a single component (WW, PT, or QA).
+ * Percentage score for one grading component: total points earned / total points possible.
+ * This is the DepEd "percentage score" method — larger assessments carry more weight than small ones.
  */
-export function calculateComponentScore(
+function componentAverage(subject: Subject, component: GradeComponent, assessments: Assessment[], period: string): { average: number; hasGrades: boolean } {
+  let earned = subject.hasBaseline === false ? 0 : Math.max(0, Math.min(BASELINE_POSSIBLE_POINTS, subject[component]));
+  let possible = subject.hasBaseline === false ? 0 : BASELINE_POSSIBLE_POINTS;
+
+  for (const assessment of assessments) {
+    if (assessment.subject !== subject.name || assessment.component !== component || assessment.period !== period) continue;
+    const maxScore = Number(assessment.maxScore);
+    const score = Number(assessment.score);
+    if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) continue;
+    earned += Math.max(0, Math.min(score, maxScore));
+    possible += maxScore;
+  }
+
+  return { average: possible > 0 ? earned / possible * 100 : 0, hasGrades: possible > 0 };
+}
+
+export type SubjectGradeBreakdown = {
+  ww: number; pt: number; exam: number;
+  wwHasGrades: boolean; ptHasGrades: boolean; examHasGrades: boolean;
+  /** Weighted percentage before any transmutation. */
+  initialGrade: number;
+  /** Reported grade (transmuted when the DepEd scale is selected). Unrounded. */
+  grade: number;
+  hasGrades: boolean;
+};
+
+/**
+ * Unrounded grade calculation. Components without any recorded assessment are left out and the remaining
+ * weights are re-normalised, so an incomplete grading period is estimated from what has been recorded so far.
+ */
+export function computeSubjectGrade(base: Subject, assessments: Assessment[], weightsBySubject: SubjectGradingWeights, period: string, options: GradeOptions = {}): SubjectGradeBreakdown {
+  const weights = weightsBySubject[base.name] ?? DEFAULT_GRADING_WEIGHTS;
+  const ww = componentAverage(base, 'ww', assessments, period);
+  const pt = componentAverage(base, 'pt', assessments, period);
+  const exam = componentAverage(base, 'exam', assessments, period);
+  const availableWeight = (ww.hasGrades ? weights.ww : 0) + (pt.hasGrades ? weights.pt : 0) + (exam.hasGrades ? weights.exam : 0);
+  const initialGrade = availableWeight === 0 ? 0
+    : (ww.average * (ww.hasGrades ? weights.ww : 0) + pt.average * (pt.hasGrades ? weights.pt : 0) + exam.average * (exam.hasGrades ? weights.exam : 0)) / availableWeight;
+  const hasGrades = availableWeight > 0;
+  const grade = hasGrades && options.scale === 'deped' ? transmuteDepEd(initialGrade) : initialGrade;
+  return {
+    ww: ww.average, pt: pt.average, exam: exam.average,
+    wwHasGrades: ww.hasGrades, ptHasGrades: pt.hasGrades, examHasGrades: exam.hasGrades,
+    initialGrade, grade, hasGrades,
+  };
+}
+
+const round1 = (value: number) => Number(value.toFixed(1));
+
+/** Subject with its grade fields filled in for `period`. Displayed values are rounded to one decimal. */
+export function calculateSubjectGrade(base: Subject, assessments: Assessment[], weightsBySubject: SubjectGradingWeights, period: string, options: GradeOptions = {}): Subject {
+  const result = computeSubjectGrade(base, assessments, weightsBySubject, period, options);
+  return {
+    ...base,
+    ww: round1(result.ww),
+    pt: round1(result.pt),
+    exam: round1(result.exam),
+    grade: round1(result.grade),
+    hasGrades: result.hasGrades,
+    wwHasGrades: result.wwHasGrades,
+    ptHasGrades: result.ptHasGrades,
+    examHasGrades: result.examHasGrades,
+  };
+}
+
+export function recalculateSubjects(baseSubjects: Subject[], assessments: Assessment[], weights: SubjectGradingWeights, period: string, options: GradeOptions = {}): Subject[] {
+  return baseSubjects.map(subject => calculateSubjectGrade(subject, assessments, weights, period, options));
+}
+
+function hypotheticalAssessment(subject: string, component: GradeComponent, score: number, maxScore: number, period: string): Assessment {
+  return { id: -1, subject, component, title: 'Hypothetical assessment', score: Math.max(0, Math.min(score, maxScore)), maxScore, date: '', period };
+}
+
+export function simulateComponentAverage(subject: Subject, component: GradeComponent, assessments: Assessment[], score: number, maxScore: number, period: string): number {
+  return componentAverage(subject, component, [...assessments, hypotheticalAssessment(subject.name, component, score, maxScore, period)], period).average;
+}
+
+export function simulateAssessment(
+  base: Subject,
   assessments: Assessment[],
-  weightPercentage: number // e.g. 0.40
-): ComponentResult {
-  if (!assessments || assessments.length === 0) {
-    return {
-      totalScore: 0,
-      totalPossible: 0,
-      percentageScore: 0,
-      weightedScore: 0,
-      count: 0,
-      hasAssessments: false,
-    };
-  }
-
-  let totalScore = 0;
-  let totalPossible = 0;
-
-  for (const a of assessments) {
-    const multiplier = a.weightMultiplier ?? 1.0;
-    totalScore += a.score * multiplier;
-    totalPossible += a.totalPossible * multiplier;
-  }
-
-  if (totalPossible <= 0) {
-    return {
-      totalScore: 0,
-      totalPossible: 0,
-      percentageScore: 0,
-      weightedScore: 0,
-      count: assessments.length,
-      hasAssessments: false,
-    };
-  }
-
-  const rawPercentage = (totalScore / totalPossible) * 100;
-  const percentageScore = Math.round(rawPercentage * 100) / 100;
-  const weightedScore = Math.round(percentageScore * weightPercentage * 100) / 100;
-
-  return {
-    totalScore: Math.round(totalScore * 100) / 100,
-    totalPossible: Math.round(totalPossible * 100) / 100,
-    percentageScore,
-    weightedScore,
-    count: assessments.length,
-    hasAssessments: true,
-  };
+  component: GradeComponent,
+  score: number,
+  maxScore: number,
+  weights: SubjectGradingWeights,
+  period: string,
+  options: GradeOptions = {},
+): number {
+  return calculateSubjectGrade(base, [...assessments, hypotheticalAssessment(base.name, component, score, maxScore, period)], weights, period, options).grade;
 }
 
-/**
- * Normalizes component weights if some components have no scores recorded yet.
- * Returns effective weights that sum to 1.0 (or raw weights if all present).
- */
-export function getEffectiveWeights(
-  weights: ComponentWeight,
-  hasWW: boolean,
-  hasPT: boolean,
-  hasQA: boolean
-): { effectiveWW: number; effectivePT: number; effectiveQA: number } {
-  let activeWeightSum = 0;
-  if (hasWW) activeWeightSum += weights.ww;
-  if (hasPT) activeWeightSum += weights.pt;
-  if (hasQA) activeWeightSum += weights.qa;
-
-  if (activeWeightSum <= 0) {
-    return { effectiveWW: weights.ww, effectivePT: weights.pt, effectiveQA: weights.qa };
-  }
-
-  // If all active, keep original weights
-  if (hasWW && hasPT && hasQA) {
-    return { effectiveWW: weights.ww, effectivePT: weights.pt, effectiveQA: weights.qa };
-  }
-
-  // Normalize so partial quarter reflects true current academic trajectory
-  return {
-    effectiveWW: hasWW ? weights.ww / activeWeightSum : 0,
-    effectivePT: hasPT ? weights.pt / activeWeightSum : 0,
-    effectiveQA: hasQA ? weights.qa / activeWeightSum : 0,
-  };
-}
-
-/**
- * Calculates the standing for a subject in a specific quarter.
- */
-export function calculateQuarterlySubject(
-  subject: Subject,
-  quarter: GradingPeriod,
-  assessments: Assessment[]
-): QuarterlySubjectResult {
-  const quarterAssessments = assessments.filter(
-    (a) => a.subjectId === subject.id && a.quarter === quarter
-  );
-
-  const wwAssessments = quarterAssessments.filter((a) => a.component === 'WW');
-  const ptAssessments = quarterAssessments.filter((a) => a.component === 'PT');
-  const qaAssessments = quarterAssessments.filter((a) => a.component === 'QA');
-
-  const hasWW = wwAssessments.length > 0;
-  const hasPT = ptAssessments.length > 0;
-  const hasQA = qaAssessments.length > 0;
-
-  const { effectiveWW, effectivePT, effectiveQA } = getEffectiveWeights(
-    subject.weights,
-    hasWW,
-    hasPT,
-    hasQA
-  );
-
-  const writtenWorks = calculateComponentScore(wwAssessments, effectiveWW);
-  const performanceTasks = calculateComponentScore(ptAssessments, effectivePT);
-  const quarterlyAssessment = calculateComponentScore(qaAssessments, effectiveQA);
-
-  const populatedCount = (hasWW ? 1 : 0) + (hasPT ? 1 : 0) + (hasQA ? 1 : 0);
-  const completionRatio = populatedCount / 3;
-  const isProvisional = populatedCount < 3;
-
-  let initialGrade = 0;
-  if (populatedCount > 0) {
-    initialGrade = Math.round((writtenWorks.weightedScore + performanceTasks.weightedScore + quarterlyAssessment.weightedScore) * 100) / 100;
-  }
-
-  const quarterlyGrade = subject.useTransmutation
-    ? (populatedCount > 0 ? transmuteGrade(initialGrade) : 0)
-    : Math.round(initialGrade);
-
-  return {
-    subjectId: subject.id,
-    subjectName: subject.name,
-    quarter,
-    writtenWorks,
-    performanceTasks,
-    quarterlyAssessment,
-    initialGrade,
-    quarterlyGrade,
-    isProvisional,
-    completionRatio,
-  };
-}
-
-/**
- * Detects weaknesses and risks based on calculated student performance.
- */
-export function detectWeaknesses(
-  subjects: AnnualSubjectResult[]
-): AcademicWeakness[] {
-  const weaknesses: AcademicWeakness[] = [];
-
-  for (const annual of subjects) {
-    const qGrades: number[] = [];
-    const quarters = ALL_QUARTERS;
-
-    for (const q of quarters) {
-      const res = annual.quarters[q];
-      if (res && res.completionRatio > 0) {
-        qGrades.push(res.quarterlyGrade);
-
-        // Check for weak individual components
-        if (res.writtenWorks.hasAssessments && res.writtenWorks.percentageScore < 75) {
-          weaknesses.push({
-            id: `low_ww_${annual.subjectId}_${q}`,
-            subjectId: annual.subjectId,
-            subjectName: annual.subjectName,
-            type: 'low_component',
-            severity: res.writtenWorks.percentageScore < 70 ? 'high' : 'medium',
-            title: `Low Written Works in ${annual.subjectName} (${q})`,
-            description: `Written works average is ${res.writtenWorks.percentageScore.toFixed(1)}%, which pulls down your standing.`,
-            suggestedAction: 'Review assignment deadlines, practice quiz topics, and consult study notes regularly.',
-          });
-        }
-
-        if (res.performanceTasks.hasAssessments && res.performanceTasks.percentageScore < 75) {
-          weaknesses.push({
-            id: `low_pt_${annual.subjectId}_${q}`,
-            subjectId: annual.subjectId,
-            subjectName: annual.subjectName,
-            type: 'low_component',
-            severity: res.performanceTasks.percentageScore < 70 ? 'high' : 'medium',
-            title: `Low Performance Tasks in ${annual.subjectName} (${q})`,
-            description: `Performance task average is ${res.performanceTasks.percentageScore.toFixed(1)}%. PTs heavily determine your grade.`,
-            suggestedAction: 'Prioritize rubrics and submission quality for upcoming hands-on projects and presentations.',
-          });
-        }
-      }
-    }
-
-    // Check for declining trend across consecutive quarters
-    if (qGrades.length >= 2) {
-      const latest = qGrades[qGrades.length - 1];
-      const previous = qGrades[qGrades.length - 2];
-      if (latest < previous - 3) {
-        weaknesses.push({
-          id: `declining_${annual.subjectId}`,
-          subjectId: annual.subjectId,
-          subjectName: annual.subjectName,
-          type: 'declining',
-          severity: latest < 75 ? 'high' : 'medium',
-          title: `Declining Trend in ${annual.subjectName}`,
-          description: `Grade dropped from ${previous} to ${latest} (a ${Math.round(previous - latest)} point decline).`,
-          suggestedAction: 'Schedule extra study sessions and target upcoming assessments using the Grade Simulator.',
-        });
-      }
-    }
-
-    // Check for critical impact on general average
-    if (annual.projectedFinalGrade < 75) {
-      weaknesses.push({
-        id: `failing_risk_${annual.subjectId}`,
-        subjectId: annual.subjectId,
-        subjectName: annual.subjectName,
-        type: 'critical_impact',
-        severity: 'high',
-        title: `Academic Risk in ${annual.subjectName}`,
-        description: `Projected final grade is currently ${annual.projectedFinalGrade.toFixed(1)} (below the 75 passing mark).`,
-        suggestedAction: 'Urgent intervention needed: calculate minimum scores required on next tasks to reach passing standing.',
-      });
-    }
-  }
-
-  return weaknesses;
-}
-
-/**
- * Calculates the complete Estimated Report Card including historical standings,
- * future assumptions, quarterly averages, and projected general average.
- */
-export function calculateEstimatedReportCard(
-  subjects: Subject[],
-  assessments: Assessment[],
-  futureAssumptions: Record<string, Partial<Record<GradingPeriod, number>>> = {}
-): EstimatedReportCard {
-  const annualResults: AnnualSubjectResult[] = [];
-  const quarterlyResultsMap = new Map<string, QuarterlySubjectResult>();
-
-  for (const subject of subjects) {
-    const quarters: Record<GradingPeriod, QuarterlySubjectResult | null> = {
-      Q1: null,
-      Q2: null,
-      Q3: null,
-      Q4: null,
-    };
-
-    let completedGradesSum = 0;
-    let completedQuartersCount = 0;
-    let projectedGradesSum = 0;
-
-    for (const q of ALL_QUARTERS) {
-      const qResult = calculateQuarterlySubject(subject, q, assessments);
-      const key = `${subject.id}_${q}`;
-      quarterlyResultsMap.set(key, qResult);
-
-      if (qResult.completionRatio > 0) {
-        quarters[q] = qResult;
-        completedGradesSum += qResult.quarterlyGrade;
-        completedQuartersCount += 1;
-        projectedGradesSum += qResult.quarterlyGrade;
-      } else {
-        // Quarter is unpopulated: use explicit future assumption if provided, or default to current subject average / 75
-        const userAssumed = futureAssumptions[subject.id]?.[q];
-        let assumedGrade = userAssumed;
-
-        if (assumedGrade === undefined) {
-          assumedGrade = completedQuartersCount > 0
-            ? Math.round(completedGradesSum / completedQuartersCount)
-            : 75; // Default neutral baseline
-        }
-
-        projectedGradesSum += assumedGrade;
-      }
-    }
-
-    const actualFinalGrade =
-      completedQuartersCount === 4
-        ? Math.round((completedGradesSum / 4) * 100) / 100
-        : null;
-
-    const projectedFinalGrade = Math.round((projectedGradesSum / 4) * 100) / 100;
-
-    annualResults.push({
-      subjectId: subject.id,
-      subjectName: subject.name,
-      quarters,
-      actualFinalGrade,
-      projectedFinalGrade,
-    });
-  }
-
-  // Calculate Quarterly Averages
-  const quarterlyAverages: Record<GradingPeriod, number | null> = {
-    Q1: null,
-    Q2: null,
-    Q3: null,
-    Q4: null,
-  };
-
-  for (const q of ALL_QUARTERS) {
-    let qTotalWeighted = 0;
-    let qTotalUnits = 0;
-    let subjectsWithQuarter = 0;
-
-    for (const s of subjects) {
-      const qRes = quarterlyResultsMap.get(`${s.id}_${q}`);
-      if (qRes && qRes.completionRatio > 0) {
-        const units = s.units ?? 1.0;
-        qTotalWeighted += qRes.quarterlyGrade * units;
-        qTotalUnits += units;
-        subjectsWithQuarter += 1;
-      }
-    }
-
-    if (subjectsWithQuarter > 0 && qTotalUnits > 0) {
-      quarterlyAverages[q] = Math.round((qTotalWeighted / qTotalUnits) * 100) / 100;
-    }
-  }
-
-  // Current General Average: based on completed quarters
-  let completedQuartersAverageSum = 0;
-  let populatedQuarterCount = 0;
-  for (const q of ALL_QUARTERS) {
-    if (quarterlyAverages[q] !== null) {
-      completedQuartersAverageSum += quarterlyAverages[q]!;
-      populatedQuarterCount++;
-    }
-  }
-
-  const currentGeneralAverage =
-    populatedQuarterCount > 0
-      ? Math.round((completedQuartersAverageSum / populatedQuarterCount) * 100) / 100
-      : null;
-
-  // Projected Final General Average: based on subject projectedFinalGrades weighted by units
-  let totalProjectedWeighted = 0;
-  let totalUnits = 0;
-
-  for (const s of subjects) {
-    const annual = annualResults.find((a) => a.subjectId === s.id);
-    const units = s.units ?? 1.0;
-    if (annual) {
-      totalProjectedWeighted += annual.projectedFinalGrade * units;
-      totalUnits += units;
-    }
-  }
-
-  const projectedGeneralAverage =
-    totalUnits > 0
-      ? Math.round((totalProjectedWeighted / totalUnits) * 100) / 100
-      : 75.0;
-
-  const weaknesses = detectWeaknesses(annualResults);
-
-  return {
-    subjects: annualResults,
-    quarterlyAverages,
-    currentGeneralAverage,
-    projectedGeneralAverage,
-    futureAssumptions,
-    weaknesses,
-  };
+export function calculateAverage(subjects: Subject[]): number {
+  const gradedSubjects = subjects.filter(subject => subject.hasGrades ?? true);
+  if (gradedSubjects.length === 0) return 0;
+  return gradedSubjects.reduce((sum, subject) => sum + subject.grade, 0) / gradedSubjects.length;
 }
