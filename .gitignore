@@ -5,6 +5,7 @@ dist-desktop/
 .codex/
 .env*
 !.env.example
+!.env.production
 *.local
 __pycache__/
 *.pyc
