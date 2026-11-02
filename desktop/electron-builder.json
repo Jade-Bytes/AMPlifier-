@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.amplifier.academic",
+  "productName": "AMPlifier",
+  "copyright": "Copyright © 2026 AMPlifier",
+  "directories": {
+    "output": "dist-desktop"
+  },
+  "files": [
+    "desktop/**/*",
+    "dist/**/*"
+  ],
+  "extraMetadata": {
+    "main": "desktop/main.cjs"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "dir",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ]
+  }
+}
