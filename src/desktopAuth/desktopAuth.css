@@ -1,0 +1,22 @@
+/* Browser sign-in page for the desktop app. Uses the shared tokens; kept separate from app.css so the page stays tiny. */
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; color: var(--text); font: 400 var(--fs-md)/1.55 var(--font-sans); -webkit-font-smoothing: antialiased;
+  background: radial-gradient(900px 600px at 110% -10%, var(--aura-gain), transparent 60%), radial-gradient(800px 600px at -10% 110%, var(--aura-signal), transparent 60%), var(--bg); }
+.desktop-auth { width: min(100%, 440px); }
+.desktop-auth-card { padding: 36px 34px 32px; border-radius: var(--r-xl); background: var(--glass-sheen), var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--glass-highlight), var(--shadow-2); -webkit-backdrop-filter: blur(var(--blur-2)); backdrop-filter: blur(var(--blur-2)); animation: rise .5s var(--ease-out) both; }
+.desktop-auth-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--grad-primary); color: var(--on-primary); box-shadow: 0 8px 22px -8px var(--gain-glow); }
+.brand-mark svg { width: 22px; height: 22px; }
+.brand-word { font: 700 22px/1 var(--font-display); letter-spacing: -.035em; }
+.brand-word span { font-weight: 400; color: var(--text-3); }
+h1 { margin: 0 0 10px; font: 700 28px/1.12 var(--font-display); letter-spacing: -.035em; }
+p { margin: 0; color: var(--text-2); }
+.is-error p { color: var(--coral); }
+.is-done h1 { background: var(--grad-signal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.google-button { width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 26px; border: 1px solid var(--glass-edge-strong); border-radius: var(--r-md); background: var(--field-hover); color: var(--text); font: 700 var(--fs-sm) var(--font-sans); cursor: pointer; box-shadow: var(--glass-highlight), var(--shadow-1); transition: transform var(--dur-2) var(--ease-out), border-color var(--ease); }
+.google-button:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--sky); }
+.google-button:disabled { opacity: .6; cursor: progress; }
+.google-button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .desktop-auth-card { animation: none; } }

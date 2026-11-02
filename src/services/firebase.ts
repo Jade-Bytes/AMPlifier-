@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { GoogleAuthProvider, getAuth, reauthenticateWithPopup, signInWithPopup, signOut, type User } from 'firebase/auth';
+import { GoogleAuthProvider, getAuth, reauthenticateWithPopup, signInWithCredential, signInWithPopup, signOut, type User } from 'firebase/auth';
 import {
   collection,
   deleteDoc,
@@ -39,6 +39,35 @@ const app = firebaseConfigured
 export const firebaseAuth = app ? getAuth(app) : null;
 export const firestore = app ? getFirestore(app) : null;
 
+/**
+ * In the desktop app, Google sign-in happens in the student's default browser (see desktop/main.cjs):
+ * embedded app windows are blocked by Google and popups inside the app are unreliable. The browser
+ * hands back a Google credential, which signs in to Firebase here. On the web, the usual popup is used.
+ */
+const desktop = typeof window !== 'undefined' ? window.desktopApp : undefined;
+export const signInHappensInBrowser = Boolean(desktop?.signInWithGoogle);
+
+async function googleCredentialFromBrowser(scopes: string[] = []) {
+  const result = await desktop!.signInWithGoogle!(scopes);
+  if (!result.ok) throw Object.assign(new Error(result.message ?? 'Sign-in did not finish.'), { code: `auth/desktop-${result.reason}` });
+  return result;
+}
+
+/** Stops waiting for the browser (the student closed the tab or changed their mind). */
+export function cancelBrowserSignIn(): void {
+  void desktop?.cancelSignIn?.();
+}
+
+/** The Google account id ("sub") inside a Google ID token. */
+function googleAccountOf(idToken: string): string | null {
+  try {
+    const payload = idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return (JSON.parse(atob(payload)) as { sub?: string }).sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
 let driveTokenCache: { uid: string; accessToken: string; expiresAt: number } | null = null;
 const driveFolderCache = new Map<string, string>();
 
@@ -47,11 +76,19 @@ async function getDriveAccessToken(uid: string): Promise<string> {
   const user = auth.currentUser;
   if (!user || user.uid !== uid) throw new Error('Sign in again before accessing Google Drive.');
   if (driveTokenCache?.uid === uid && driveTokenCache.expiresAt > Date.now() + 60_000) return driveTokenCache.accessToken;
-  const provider = new GoogleAuthProvider();
-  provider.addScope('https://www.googleapis.com/auth/drive.file');
-  const result = await reauthenticateWithPopup(user, provider);
-  const credential = GoogleAuthProvider.credentialFromResult(result);
-  const accessToken = credential?.accessToken;
+  let accessToken: string | undefined;
+  if (signInHappensInBrowser) {
+    const result = await googleCredentialFromBrowser(['https://www.googleapis.com/auth/drive.file']);
+    // Drive access must come from the same Google account the student is signed in with.
+    const expected = user.providerData.find(profile => profile.providerId === 'google.com')?.uid;
+    if (expected && googleAccountOf(result.idToken) !== expected) throw new Error(`Choose the Google account you use in AMPlifier${user.email ? ` (${user.email})` : ''} to connect Drive.`);
+    accessToken = result.accessToken;
+  } else {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    const result = await reauthenticateWithPopup(user, provider);
+    accessToken = GoogleAuthProvider.credentialFromResult(result)?.accessToken;
+  }
   if (!accessToken) throw new Error('Google did not provide Drive access. Try connecting again.');
   driveTokenCache = { uid, accessToken, expiresAt: Date.now() + 50 * 60_000 };
   return accessToken;
@@ -135,6 +172,10 @@ function requireFirebase() {
 
 export async function signInWithGoogle(): Promise<User> {
   const { auth } = requireFirebase();
+  if (signInHappensInBrowser) {
+    const { idToken, accessToken } = await googleCredentialFromBrowser();
+    return (await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken))).user;
+  }
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const result = await signInWithPopup(auth, provider);

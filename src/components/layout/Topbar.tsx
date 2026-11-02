@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Bell, CalendarDays, Check, CloudOff, Loader2, Moon, Search, Sun } from 'lucide-react';
 import { usePreferences } from '../../lib/preferences';
+import { BrandMark } from '../ui/Brand';
 import { PERIODS } from '../../engine/periods';
 import { COMPONENT_LABELS } from '../../engine/calculator';
 import { formatDate } from '../../lib/dates';
@@ -73,6 +74,7 @@ export default function Topbar({ subjects, assessments, tasks, period, onPeriodC
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   return <header className="topbar">
+    <span className="topbar-brand"><BrandMark/></span>
     <div className="search" role="combobox" aria-expanded={open && results.length > 0} aria-haspopup="listbox" aria-owns="search-results">
       <Search size={15} aria-hidden="true"/>
       <input ref={input} value={query} placeholder="Search subjects, assessments, tasks…" aria-label="Search" aria-autocomplete="list" aria-controls="search-results"

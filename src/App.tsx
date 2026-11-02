@@ -7,6 +7,7 @@ import IdentitySetupPage from './components/IdentitySetupPage';
 import ReportCardView from './components/ReportCardView';
 import ClassScheduleView from './components/ClassScheduleView';
 import Sidebar from './components/layout/Sidebar';
+import MobileNav from './components/layout/MobileNav';
 import Topbar, { type SearchResult } from './components/layout/Topbar';
 import { pageInfo, TOUR_STEPS, type PageId } from './components/layout/navigation';
 import { FeedbackProvider, useFeedback } from './components/ui/Feedback';
@@ -22,7 +23,7 @@ import SimulatorView from './components/views/SimulatorView';
 import ForecastView from './components/views/ForecastView';
 import TasksView from './components/views/TasksView';
 import SettingsView from './components/views/SettingsView';
-import { firebaseAuth, firebaseConfigured, getUserWorkspace, saveAcademicSetup, saveUsernameProfile, signInWithGoogle, signOutUser } from './services/firebase';
+import { cancelBrowserSignIn, firebaseAuth, firebaseConfigured, signInHappensInBrowser, getUserWorkspace, saveAcademicSetup, saveUsernameProfile, signInWithGoogle, signOutUser } from './services/firebase';
 import { useWorkspace, friendlyError } from './state/useWorkspace';
 import { useAcademicModel } from './state/useAcademicModel';
 import { loadCached, saveCached } from './lib/localCache';
@@ -45,6 +46,10 @@ function authErrorMessage(error: unknown): string {
   if (code === 'auth/popup-blocked') return 'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.';
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return 'The sign-in window was closed before sign-in finished.';
   if (code === 'auth/network-request-failed') return 'Could not reach Google. Check your connection and try again.';
+  // Desktop app: sign-in happens in the default browser.
+  if (code === 'auth/desktop-cancelled') return '';
+  if (code === 'auth/desktop-timeout') return 'Sign-in timed out before it finished in your browser. Try again.';
+  if (code === 'auth/desktop-error') return (error as Error).message || 'Sign-in did not finish in your browser. Try again.';
   return friendlyError(error);
 }
 
@@ -61,6 +66,8 @@ function AmplifierApp() {
   // Narrow windows always get the icon rail; the preference applies to wider ones.
   const narrowWindow = useMediaQuery('(max-width: 960px)');
   const railCollapsed = prefs.sidebarCollapsed || narrowWindow;
+  // Phones get a bottom tab bar instead of the side rail.
+  const phone = useMediaQuery('(max-width: 720px)');
 
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -132,12 +139,15 @@ function AmplifierApp() {
     setTourIndex(null);
   }
 
+  // A newer attempt (e.g. "Open it again") replaces an older one; only the latest updates the screen.
+  const signInAttempt = useRef(0);
   async function signIn() {
+    const attempt = ++signInAttempt.current;
     setAuthBusy(true);
     setAuthError('');
     try { await signInWithGoogle(); }
-    catch (error) { setAuthError(authErrorMessage(error)); }
-    finally { setAuthBusy(false); }
+    catch (error) { if (attempt === signInAttempt.current) setAuthError(authErrorMessage(error)); }
+    finally { if (attempt === signInAttempt.current) setAuthBusy(false); }
   }
 
   async function signOut() {
@@ -229,13 +239,14 @@ function AmplifierApp() {
   useEffect(() => { if (tourOpen && performance.now() - readyAt.current > 1500) play('open'); }, [tourOpen, play]);
 
   if (authLoading) return <LoadingScreen message="Loading your academic workspace…"/>;
-  if (!authUser) return <AuthPage configured={firebaseConfigured} loading={authBusy} error={authError} onGoogleSignIn={signIn} onDemoPreview={enterDemo} showDemoPreview={import.meta.env.DEV}/>;
+  if (!authUser) return <AuthPage configured={firebaseConfigured} loading={authBusy} error={authError} onGoogleSignIn={signIn} signInInBrowser={signInHappensInBrowser} onCancelSignIn={cancelBrowserSignIn} onDemoPreview={enterDemo} showDemoPreview={import.meta.env.DEV}/>;
   if (!setupCompleted) return <AcademicSetupPage userName={authUser.displayName ?? ''} saving={setupSaving} error={setupError} onComplete={completeSetup}/>;
   if (needsIdentity && ws.profile) return <IdentitySetupPage initialDisplayName={ws.profile.displayName ?? authUser.displayName ?? ''} initialUsername={ws.profile.username ?? ''} saving={setupSaving} error={setupError} onComplete={completeIdentity}/>;
 
   const displayName = ws.profile?.displayName || authUser.displayName || 'Student';
   const info = pageInfo(page);
   const openTasks = ws.tasks.filter(task => !task.done).length;
+  const overdueTasks = ws.tasks.filter(task => !task.done && task.dueDate && daysUntil(task.dueDate) < 0).length;
   const urgent = model.upcoming.filter(item => item.source === 'Task' && daysUntil(item.date) <= 2).length;
   const primaryAction = page === 'tasks' ? { label: 'Add task', run: () => setDialog({ kind: 'task' }) }
     : page === 'schedule' ? { label: 'Add class', run: () => setDialog({ kind: 'class' }) }
@@ -243,9 +254,11 @@ function AmplifierApp() {
     : { label: 'Record score', run: () => setDialog({ kind: 'score', subject: page === 'grades' || page === 'simulator' ? selectedSubject : undefined }) };
   const tourStep = tourIndex === null ? null : TOUR_STEPS[tourIndex];
 
-  return <div className="app-shell" data-sidebar={railCollapsed ? 'collapsed' : 'expanded'}>
+  return <div className="app-shell" data-layout={phone ? 'phone' : 'desktop'} data-sidebar={railCollapsed ? 'collapsed' : 'expanded'}>
     <a className="skip-link" href="#main">Skip to content</a>
-    <Sidebar page={page} onNavigate={navigate} profile={ws.profile} displayName={displayName} handle={ws.profile?.username ?? ''} photoURL={authUser.photoURL} openTasks={openTasks} overdueTasks={ws.tasks.filter(task => !task.done && task.dueDate && daysUntil(task.dueDate) < 0).length} onOpenTour={() => moveTour(0)} collapsed={railCollapsed} onToggleCollapsed={() => updatePrefs({ sidebarCollapsed: !prefs.sidebarCollapsed })}/>
+    {phone
+      ? <MobileNav page={page} onNavigate={navigate} profile={ws.profile} displayName={displayName} photoURL={authUser.photoURL} openTasks={openTasks} overdueTasks={overdueTasks} onOpenTour={() => moveTour(0)}/>
+      : <Sidebar page={page} onNavigate={navigate} profile={ws.profile} displayName={displayName} handle={ws.profile?.username ?? ''} photoURL={authUser.photoURL} openTasks={openTasks} overdueTasks={overdueTasks} onOpenTour={() => moveTour(0)} collapsed={railCollapsed} onToggleCollapsed={() => updatePrefs({ sidebarCollapsed: !prefs.sidebarCollapsed })}/>}
     <div className="app-main">
       <Topbar subjects={ws.subjects} assessments={ws.assessments} tasks={ws.tasks} period={model.period} onPeriodChange={changePeriod} saveState={ws.saveState} demo={demo} attentionCount={urgent} onOpenDeadlines={() => navigate('tasks')} onSelect={onSearch}/>
       {demo && <div className="demo-banner" role="status"><Sparkles size={15}/><span><b>Developer preview.</b> Sample data only — changes disappear when you exit.</span><button className="btn btn-ghost btn-sm" onClick={exitDemo}>Exit preview</button></div>}

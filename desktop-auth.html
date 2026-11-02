@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400..800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" />
+    <script>
+      try { document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (error) { document.documentElement.dataset.theme = 'dark'; }
+    </script>
+    <title>Sign in to AMPlifier</title>
+  </head>
+  <body>
+    <main class="desktop-auth" id="root" aria-live="polite"></main>
+    <script type="module" src="/src/desktopAuth/main.ts"></script>
+  </body>
+</html>

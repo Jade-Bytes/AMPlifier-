@@ -6,6 +6,9 @@ type AuthPageProps = {
   loading: boolean;
   error: string;
   onGoogleSignIn: () => void;
+  /** Desktop app: Google sign-in finishes in the default browser, so waiting gets its own state. */
+  signInInBrowser?: boolean;
+  onCancelSignIn?: () => void;
   onDemoPreview: () => void;
   showDemoPreview: boolean;
 };
@@ -26,7 +29,7 @@ function SignalTrace() {
   </svg>;
 }
 
-export default function AuthPage({ configured, loading, error, onGoogleSignIn, onDemoPreview, showDemoPreview }: AuthPageProps) {
+export default function AuthPage({ configured, loading, error, onGoogleSignIn, signInInBrowser = false, onCancelSignIn, onDemoPreview, showDemoPreview }: AuthPageProps) {
   return <main className="auth-page">
     <section className="auth-story">
       <SignalTrace/>
@@ -48,12 +51,16 @@ export default function AuthPage({ configured, loading, error, onGoogleSignIn, o
         <div className="auth-panel-icon"><GraduationCap size={22}/></div>
         <div className="auth-form-eyebrow">Welcome to AMPlifier</div>
         <h2>Sign in or create your account</h2>
-        <p>Use your Google account to securely access your academic workspace.</p>
+        <p>{signInInBrowser ? 'Sign in with Google in your web browser, where your accounts are already signed in. You’ll come straight back here.' : 'Use your Google account to securely access your academic workspace.'}</p>
         {error && <div className="auth-error" role="alert"><CircleAlert size={16}/><span>{error}</span></div>}
         <button className="google-signin-btn" onClick={onGoogleSignIn} disabled={!configured || loading}>
           {loading ? <span className="auth-spinner" aria-hidden="true"/> : <svg aria-hidden="true" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.9a11.1 11.1 0 0 1-4.78 7.29l7.73 6c4.51-4.18 7.13-10.33 7.13-17.76Z"/><path fill="#FBBC05" d="M10.54 28.59A14.44 14.44 0 0 1 9.75 24c0-1.59.28-3.13.78-4.59l-7.98-6.2A23.9 23.9 0 0 0 0 24c0 3.89.93 7.57 2.56 10.78l7.98-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.9-5.79l-7.73-6c-2.14 1.44-4.87 2.29-8.17 2.29-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>}
-          {loading ? 'Connecting to Google…' : 'Continue with Google'}{!loading && <ArrowRight size={17}/>}
+          {loading ? (signInInBrowser ? 'Waiting for your browser…' : 'Connecting to Google…') : 'Continue with Google'}{!loading && <ArrowRight size={17}/>}
         </button>
+        {loading && signInInBrowser && <div className="auth-browser-wait" role="status">
+          <span>Finish signing in in the browser tab that just opened.</span>
+          <span><button type="button" className="link-btn" onClick={onGoogleSignIn}>Open it again</button> · <button type="button" className="link-btn" onClick={onCancelSignIn}>Cancel</button></span>
+        </div>}
         {!configured && <div className="auth-setup-note"><CircleAlert size={15}/><span>Firebase is not configured yet. Copy <code>.env.example</code> to <code>.env.local</code>, add your Firebase web app keys, then restart the dev server.</span></div>}
         {showDemoPreview && <><button className="demo-preview-btn" onClick={onDemoPreview} disabled={loading}>Explore with sample data</button><small className="demo-preview-caption">Preview the app with fictional grades. Nothing is saved.</small></>}
         <div className="auth-divider"/>

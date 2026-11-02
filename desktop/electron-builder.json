@@ -2,13 +2,16 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.amplifier.academic",
   "productName": "AMPlifier",
-  "copyright": "Copyright © 2026 AMPlifier",
+  "copyright": "Copyright \u00a9 2026 AMPlifier",
   "directories": {
     "output": "dist-desktop"
   },
   "files": [
-    "desktop/**/*",
-    "dist/**/*"
+    "desktop/main.cjs",
+    "desktop/preload.cjs",
+    "desktop/icon.png",
+    "dist/**/*",
+    "!node_modules/**/*"
   ],
   "extraMetadata": {
     "main": "desktop/main.cjs"
@@ -16,13 +19,28 @@
   "win": {
     "target": [
       {
-        "target": "dir",
-        "arch": ["x64"]
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
       },
       {
         "target": "portable",
-        "arch": ["x64"]
+        "arch": [
+          "x64"
+        ]
       }
-    ]
+    ],
+    "icon": "desktop/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "AMPlifier"
+  },
+  "portable": {
+    "artifactName": "AMPlifier-${version}-portable.exe"
   }
 }

@@ -70,6 +70,8 @@
 .auth-error svg { flex: 0 0 auto; margin-top: 1px; color: var(--coral); }
 .auth-setup-note code { padding: 1px 5px; border-radius: 4px; background: var(--track); font-size: 11.5px; }
 .auth-error { border-color: color-mix(in srgb, var(--coral) 35%, transparent); background: var(--coral-soft); }
+.auth-browser-wait { display: grid; gap: 6px; margin-top: 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--sky) 35%, transparent); border-radius: var(--r-sm); background: var(--sky-soft); color: var(--text-2); font-size: var(--fs-xs); line-height: 1.5; }
+.auth-browser-wait .link-btn { font-size: var(--fs-xs); }
 .auth-divider { height: 1px; margin: 26px 0 18px; background: var(--border); }
 .auth-privacy { display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--text-3); font-size: var(--fs-xs); }
 .auth-privacy svg { color: var(--signal); }
