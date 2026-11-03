@@ -50,6 +50,9 @@ function authErrorMessage(error: unknown): string {
   if (code === 'auth/desktop-cancelled') return '';
   if (code === 'auth/desktop-timeout') return 'Sign-in timed out before it finished in your browser. Try again.';
   if (code === 'auth/desktop-error') return (error as Error).message || 'Sign-in did not finish in your browser. Try again.';
+  // Android app: sign-in uses the device's Google accounts.
+  if (code === 'auth/native-cancelled') return '';
+  if (code === 'auth/native-error') return (error as Error).message;
   return friendlyError(error);
 }
 

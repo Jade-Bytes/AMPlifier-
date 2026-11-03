@@ -1,5 +1,7 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { GoogleAuthProvider, getAuth, reauthenticateWithPopup, signInWithCredential, signInWithPopup, signOut, type User } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { SocialLogin } from '@capgo/capacitor-social-login';
+import { GoogleAuthProvider, getAuth, indexedDBLocalPersistence, initializeAuth, reauthenticateWithPopup, signInWithCredential, signInWithPopup, signOut, type User } from 'firebase/auth';
 import {
   collection,
   deleteDoc,
@@ -36,7 +38,12 @@ const app = firebaseConfigured
   ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
   : null;
 
-export const firebaseAuth = app ? getAuth(app) : null;
+/** Running as the Android app (Capacitor), where Google sign-in is native rather than a popup. */
+const nativeApp = Capacitor.isNativePlatform();
+
+// The app's WebView cannot open Firebase's sign-in popup, so it skips the popup machinery and keeps the
+// session in IndexedDB, which the app's WebView persists between launches.
+export const firebaseAuth = app ? (nativeApp ? initializeAuth(app, { persistence: indexedDBLocalPersistence }) : getAuth(app)) : null;
 export const firestore = app ? getFirestore(app) : null;
 
 /**
@@ -68,6 +75,32 @@ function googleAccountOf(idToken: string): string | null {
   }
 }
 
+/**
+ * In the Android app, Google sign-in uses the device's Google accounts (Credential Manager): Google
+ * blocks its sign-in page inside app WebViews. The Google credential then signs in to Firebase here.
+ * Needs the Firebase project's Web client ID, and an Android OAuth client for the app's package name
+ * and signing certificate in the same Google Cloud project (see android/README.md).
+ */
+let nativeSignInReady: Promise<unknown> | null = null;
+
+async function googleCredentialFromDevice(scopes: string[] = []) {
+  const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
+  if (!webClientId) throw Object.assign(new Error('This build of AMPlifier has no Google client ID (VITE_GOOGLE_WEB_CLIENT_ID).'), { code: 'auth/native-error' });
+  nativeSignInReady ??= SocialLogin.initialize({ google: { webClientId } });
+  await nativeSignInReady;
+  try {
+    const result = await SocialLogin.login({ provider: 'google', options: scopes.length ? { scopes } : {} });
+    const response = result.result;
+    if (!('idToken' in response) || !response.idToken) throw new Error('Google did not return a sign-in token. Try again.');
+    return { idToken: response.idToken, accessToken: response.accessToken?.token };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/cancel/i.test(message)) throw Object.assign(new Error(message), { code: 'auth/native-cancelled' });
+    if (/no credentials|no.*account/i.test(message)) throw Object.assign(new Error('Add a Google account to this device (Settings → Accounts), then try again.'), { code: 'auth/native-error' });
+    throw Object.assign(new Error(message || 'Google sign-in did not finish. Try again.'), { code: 'auth/native-error' });
+  }
+}
+
 let driveTokenCache: { uid: string; accessToken: string; expiresAt: number } | null = null;
 const driveFolderCache = new Map<string, string>();
 
@@ -77,8 +110,9 @@ async function getDriveAccessToken(uid: string): Promise<string> {
   if (!user || user.uid !== uid) throw new Error('Sign in again before accessing Google Drive.');
   if (driveTokenCache?.uid === uid && driveTokenCache.expiresAt > Date.now() + 60_000) return driveTokenCache.accessToken;
   let accessToken: string | undefined;
-  if (signInHappensInBrowser) {
-    const result = await googleCredentialFromBrowser(['https://www.googleapis.com/auth/drive.file']);
+  if (signInHappensInBrowser || nativeApp) {
+    const scopes = ['https://www.googleapis.com/auth/drive.file'];
+    const result = nativeApp ? await googleCredentialFromDevice(scopes) : await googleCredentialFromBrowser(scopes);
     // Drive access must come from the same Google account the student is signed in with.
     const expected = user.providerData.find(profile => profile.providerId === 'google.com')?.uid;
     if (expected && googleAccountOf(result.idToken) !== expected) throw new Error(`Choose the Google account you use in AMPlifier${user.email ? ` (${user.email})` : ''} to connect Drive.`);
@@ -176,6 +210,10 @@ export async function signInWithGoogle(): Promise<User> {
     const { idToken, accessToken } = await googleCredentialFromBrowser();
     return (await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken))).user;
   }
+  if (nativeApp) {
+    const { idToken, accessToken } = await googleCredentialFromDevice();
+    return (await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken))).user;
+  }
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const result = await signInWithPopup(auth, provider);
@@ -185,6 +223,8 @@ export async function signInWithGoogle(): Promise<User> {
 export async function signOutUser(): Promise<void> {
   const { auth } = requireFirebase();
   await signOut(auth);
+  // Also forget the device's Google sign-in, so the next sign-in offers the account picker again.
+  if (nativeApp && nativeSignInReady) await SocialLogin.logout({ provider: 'google' }).catch(() => undefined);
 }
 
 export async function ensureUserDocument(user: User): Promise<void> {

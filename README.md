@@ -19,6 +19,7 @@ Copy `.env.example` to `.env.local`, add your Firebase web app configuration, th
 | `npm run build` | Production bundle in `dist/` |
 | `npm run check` | Typecheck, tests, and build in one go |
 | `npm run mcp -- --backup <file>` | MCP server for Claude and other AI clients (see below) |
+| `npm run android:build` / `android:release` | Android APK for phones and tablets (see [android/README.md](android/README.md)) |
 
 ## Features
 
@@ -126,6 +127,7 @@ Firebase web configuration is included in the browser bundle by Vite, so those v
 3. Create a Cloud Firestore database and deploy the rules in `firestore.rules`. Social discovery starts disabled; users must opt in before their name, photo, handle, and optional bio appear in the directory.
 4. In the same Google Cloud project, enable the Google Drive API. The first time a student connects Drive, AMPlifier requests the limited `drive.file` permission.
 5. Restart Vite after changing `.env.local`.
+6. For the Android app, register an Android app in Firebase with the signing key's SHA-1 (see [android/README.md](android/README.md#google-sign-in)).
 
 ## UI design
 

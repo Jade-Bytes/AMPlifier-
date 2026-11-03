@@ -824,5 +824,7 @@ button.hero-metric:hover .hero-metric-go { opacity: 1; transform: translateX(0);
 @media (display-mode: standalone) {
   body { padding-top: env(safe-area-inset-top); }
 }
+/* Android app: same, since it draws edge to edge under the status bar. */
+[data-native] body { padding-top: env(safe-area-inset-top); }
 [data-layout=phone] .period-picker svg { display: none; }
 [data-layout=phone] .period-picker select { padding-left: 10px; width: 108px; }

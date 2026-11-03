@@ -14,9 +14,15 @@
     "mcp": "tsx src/mcp/main.ts",
     "desktop:build": "vite build --base ./ && electron-builder --config desktop/electron-builder.json",
     "desktop:dev": "vite build --base ./ && electron desktop/main.cjs",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "android:sync": "vite build && cap sync android",
+    "android:build": "npm run android:sync && node scripts/gradle.cjs assembleDebug",
+    "android:release": "npm run android:sync && node scripts/gradle.cjs assembleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capgo/capacitor-social-login": "^8.7.6",
     "dompurify": "^3.4.17",
     "firebase": "^13.1.0",
     "lucide-react": "^0.468.0",
@@ -26,6 +32,7 @@
     "recharts": "^2.15.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",

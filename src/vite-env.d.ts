@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  /** The Firebase project's Google "Web application" OAuth client ID, used by the Android app's native sign-in. */
+  readonly VITE_GOOGLE_WEB_CLIENT_ID?: string;
+}
+
 /** Result of a Google sign-in completed in the system browser by the desktop app. */
 type DesktopSignInResult =
   | { ok: true; idToken: string; accessToken?: string }
