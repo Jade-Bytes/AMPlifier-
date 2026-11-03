@@ -8,7 +8,7 @@
  *  - Google Fonts: cache first, so the app keeps its typography offline.
  *  - Everything else (Firebase, Google sign-in, Drive): never touched.
  */
-const VERSION = 'amplifier-v1';
+const VERSION = 'amplifier-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -58,6 +58,7 @@ self.addEventListener('fetch', event => {
   }
   if (url.origin !== self.location.origin) return; // Firebase, Google sign-in, Drive: straight to network
   if (url.pathname.endsWith('/desktop-auth.html')) return; // sign-in page for the desktop app: always fresh
+  if (url.pathname.endsWith('/landing.html')) return; // marketing page: never cached in place of the app shell
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstPage(request));
