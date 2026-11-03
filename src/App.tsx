@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
 import { ArrowRight, Plus, Sparkles, Users, X } from 'lucide-react';
 import AuthPage from './components/AuthPage';
 import AcademicSetupPage from './components/AcademicSetupPage';
@@ -33,6 +34,13 @@ import type { AcademicSetup, Assessment, ClassSession, Task } from './types/app'
 // Notes (DOCX preview) and Community (social queries) are loaded on first visit to keep startup light.
 const NotesView = lazy(() => import('./components/NotesView'));
 const SocialHub = lazy(() => import('./components/SocialHub'));
+
+// Signed-out visitors to the website start on the landing page, whose sign-up links come back with ?signin.
+// The Android, desktop, and installed (Home Screen) apps keep the sign-in screen.
+const SIGNED_OUT_TO_LANDING = !Capacitor.isNativePlatform()
+  && !window.desktopApp
+  && !matchMedia('(display-mode: standalone)').matches
+  && !new URLSearchParams(location.search).has('signin');
 
 type DialogState =
   | { kind: 'score'; assessment?: Assessment; subject?: string }
@@ -241,7 +249,11 @@ function AmplifierApp() {
   const tourOpen = tourIndex !== null;
   useEffect(() => { if (tourOpen && performance.now() - readyAt.current > 1500) play('open'); }, [tourOpen, play]);
 
-  if (authLoading) return <LoadingScreen message="Loading your academic workspace…"/>;
+  // An auth error stays on the sign-in screen so it can be read.
+  const toLanding = SIGNED_OUT_TO_LANDING && !authLoading && !authUser && !authError && !demo;
+  useEffect(() => { if (toLanding) location.replace('./landing.html'); }, [toLanding]);
+
+  if (authLoading || toLanding) return <LoadingScreen message="Loading your academic workspace…"/>;
   if (!authUser) return <AuthPage configured={firebaseConfigured} loading={authBusy} error={authError} onGoogleSignIn={signIn} signInInBrowser={signInHappensInBrowser} onCancelSignIn={cancelBrowserSignIn} onDemoPreview={enterDemo} showDemoPreview={import.meta.env.DEV}/>;
   if (!setupCompleted) return <AcademicSetupPage userName={authUser.displayName ?? ''} saving={setupSaving} error={setupError} onComplete={completeSetup}/>;
   if (needsIdentity && ws.profile) return <IdentitySetupPage initialDisplayName={ws.profile.displayName ?? authUser.displayName ?? ''} initialUsername={ws.profile.username ?? ''} saving={setupSaving} error={setupError} onComplete={completeIdentity}/>;
