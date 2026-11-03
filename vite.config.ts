@@ -9,6 +9,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        // Marketing page with download links; links back to the app at ./.
+        landing: fileURLToPath(new URL('./landing.html', import.meta.url)),
         // Opened in the default browser by the desktop app to finish Google sign-in (desktop/main.cjs).
         'desktop-auth': fileURLToPath(new URL('./desktop-auth.html', import.meta.url)),
       },
