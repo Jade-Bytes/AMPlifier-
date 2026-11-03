@@ -1,7 +1,8 @@
 /**
  * AMPlifier's sound manager — the only place in the app that touches audio.
  *
- * Assets: original sounds rendered by scripts/generate-sounds.py into public/sounds/*.wav. They are
+ * Assets: original sounds rendered by scripts/generate-sounds.py into public/sounds/*.wav (the landing
+ * page's swell and detent, public/sounds/landing/*.mp3, were generated with Creative Claw). They are
  * fetched and decoded once, after the first user gesture (browsers block audio before one). Until a
  * file is ready — or if it fails to load — the same sound is synthesized with the Web Audio API, so
  * a missing asset is never audible as silence or an error.
@@ -20,7 +21,9 @@ export type SoundName =
   | 'tap' | 'select' | 'toggleOn' | 'toggleOff' | 'navigate' | 'open' | 'close'
   | 'tick' | 'settleUp' | 'settleDown' | 'reveal' | 'load'
   | 'success' | 'save' | 'complete' | 'milestone'
-  | 'notify' | 'warning' | 'error';
+  | 'notify' | 'warning' | 'error'
+  // Landing page only (landing.html): the console's meters rising, and the simulator slider's steps.
+  | 'swell' | 'detent';
 export type SoundSettings = { enabled: boolean; volume: number; categories: Record<SoundCategory, boolean> };
 
 type Spec = { file: string; category: SoundCategory; gain: number; priority: 0 | 1 | 2 | 3; cooldown: number };
@@ -45,6 +48,8 @@ const SPECS: Record<SoundName, Spec> = {
   notify:     { file: 'notify',      category: 'alerts',    gain: .38, priority: 2, cooldown: 400 },
   warning:    { file: 'warning',     category: 'alerts',    gain: .4,  priority: 3, cooldown: 400 },
   error:      { file: 'error',       category: 'alerts',    gain: .42, priority: 3, cooldown: 400 },
+  swell:      { file: 'landing/console-rise.mp3', category: 'data', gain: .34, priority: 1, cooldown: 900 },
+  detent:     { file: 'landing/fader-tick.mp3',   category: 'interface', gain: .22, priority: 0, cooldown: 35 },
 };
 
 export const SOUND_CATEGORIES: { id: SoundCategory; label: string; description: string; preview: SoundName }[] = [
@@ -80,6 +85,8 @@ const FALLBACK: Record<SoundName, SynthVoice[]> = {
   notify: [{ freq: 1108.7, dur: .3, gain: .5 }, { freq: 1318.5, at: .11, dur: .35, gain: .5 }],
   warning: [{ freq: 493.9, dur: .12, gain: .55, type: 'triangle' }, { freq: 493.9, at: .16, dur: .14, gain: .55, type: 'triangle' }],
   error: [{ freq: 659.3, dur: .16, gain: .55, type: 'triangle' }, { freq: 493.9, at: .12, dur: .24, gain: .55, type: 'triangle' }],
+  swell: [{ freq: 329.6, glide: 987.8, dur: 1.1, gain: .3 }, { freq: 659.3, at: .15, glide: 1975.5, dur: .95, gain: .15 }],
+  detent: [{ freq: 2100, dur: .025, gain: .45 }],
 };
 
 type Voice = { name: SoundName; priority: number; started: number; stop: () => void };
@@ -270,7 +277,7 @@ class SoundManager {
       const current = this.buffers.get(name);
       if (current instanceof AudioBuffer || current === 'loading') continue;
       this.buffers.set(name, 'loading');
-      fetch(`${base}${spec.file}.wav`)
+      fetch(`${base}${spec.file.includes('.') ? spec.file : `${spec.file}.wav`}`)
         .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.arrayBuffer(); })
         .then(data => context.decodeAudioData(data))
         .then(buffer => { this.buffers.set(name, buffer); })
