@@ -35,6 +35,7 @@
         </a>
         <nav class="nav-links" aria-label="Sections">
           <a href="#download">Download</a>
+          <a href="#trailer">Trailer</a>
           <a href="#how">How it works</a>
           <a href="#features">Features</a>
           <a href="#grading">Grades</a>
@@ -84,6 +85,10 @@
           </a>
         </div>
         <p class="downloads-note" id="platform-note" aria-live="polite">Free, and your workspace syncs across every device you sign in on.</p>
+        <a class="trailer-link" href="#trailer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+          Watch the trailer
+        </a>
       </section>
 
       <!-- The signature moment: each subject as a channel strip on a mixing console. -->
@@ -107,6 +112,40 @@
             </div>
           </div>
           <div class="strips" id="strips"></div>
+        </div>
+      </section>
+
+      <!-- The video loads only after a click (preload="none"), and it is left out of the app's offline cache and installers. -->
+      <section class="section trailer" id="trailer" data-spy="trailer">
+        <h2>See it in one minute.</h2>
+        <div class="trailer-stage">
+          <video id="trailer-video" controls preload="none" playsinline width="1920" height="1080" poster="./trailer/amplifier-trailer-poster.jpg" aria-label="AMPlifier release trailer">
+            <source src="./trailer/amplifier-trailer.webm" type="video/webm" />
+            <source src="./trailer/amplifier-trailer.mp4" type="video/mp4" />
+            <track kind="captions" src="./trailer/amplifier-trailer.en.vtt" srclang="en" label="English" />
+            <a href="./trailer/amplifier-trailer.mp4">Download the trailer</a>
+          </video>
+          <button class="trailer-play" id="trailer-play" type="button" data-sound="none" hidden>
+            <span class="trailer-play-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg></span>
+            <span class="trailer-play-label">Play the trailer<small>1 minute, with sound</small></span>
+          </button>
+        </div>
+        <div class="trailer-after">
+          <a class="btn btn-primary" href="#download" data-sound="open">Download AMPlifier, free</a>
+          <details class="trailer-text">
+            <summary>Read what the trailer shows</summary>
+            <div>
+              <p>The trailer has music and sound effects but no narration. All grades in it are sample grades, and AMPlifier's grades are estimates from the scores you enter.</p>
+              <ol>
+                <li>A quiet signal line and the words: "The report card is coming. Do you know your grade?"</li>
+                <li>A Math quiz score of 24 / 25 stirs one level meter on a mixing console. Eight subjects then land on the beat: Math 94.0, English 96.5, Science 95.2, Filipino 94.8, AP 93.7, ESP 97.1, MAPEH 96.3 and TLE 92.6, for a general average of 95.0 against a target of 95.</li>
+                <li>Quick views of the Simulator, Forecast, Report card, Gradebook, and Tasks, schedule and notes.</li>
+                <li>A worked Math grade: written work 96% at 40% adds 38.4, performance tasks 94% at 40% adds 37.6, and a quarterly exam of 45 / 50 at 20% adds 18.0, for a term grade of 94.0. In the Simulator, the exam slider moves to 48 / 50, which adds 19.2. The grade becomes 95.2 and the target line at 95 lights up: "You need 48 / 50 to reach 95." Nothing is saved.</li>
+                <li>The same workspace on each device. Android phones and tablets: download the APK from the website. Windows 10 and 11: download the installer from the website. iPhone and iPad: open the web app in Safari, then Add to Home Screen. Mac, Chromebook and Linux: open it in the browser, with nothing to install. On every platform, sign in with Google and your workspace syncs across devices.</li>
+                <li>The AMPlifier logo and the words: "Know your grade before the report card does. Free. Download now." followed by the website address.</li>
+              </ol>
+            </div>
+          </details>
         </div>
       </section>
 

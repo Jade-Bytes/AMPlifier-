@@ -1,0 +1,32 @@
+{
+  "name": "amplifier-trailer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AMPlifier v0.2.0 release trailer. Its dependencies stay out of the app.",
+  "scripts": {
+    "studio": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "still": "remotion still",
+    "render": "remotion render Trailer out/trailer-master.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.540",
+    "@remotion/google-fonts": "4.0.540",
+    "@remotion/media": "4.0.540",
+    "@remotion/three": "4.0.540",
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.2",
+    "@react-three/postprocessing": "3.2.2",
+    "postprocessing": "6.39.6",
+    "three": "0.187.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.540"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.187.0",
+    "typescript": "5.9.3"
+  }
+}

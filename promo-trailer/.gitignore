@@ -1,0 +1,6 @@
+node_modules/
+build/
+out/
+stills/
+public/audio/premix.wav
+public/audio/mix.wav

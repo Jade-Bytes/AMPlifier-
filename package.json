@@ -15,7 +15,7 @@
     "desktop:build": "vite build --base ./ && electron-builder --config desktop/electron-builder.json",
     "desktop:dev": "vite build --base ./ && electron desktop/main.cjs",
     "deploy": "npm run build && gh-pages -d dist",
-    "android:sync": "vite build && cap sync android",
+    "android:sync": "vite build && node scripts/strip-trailer.cjs && cap sync android",
     "android:build": "npm run android:sync && node scripts/gradle.cjs assembleDebug",
     "android:release": "npm run android:sync && node scripts/gradle.cjs assembleRelease"
   },

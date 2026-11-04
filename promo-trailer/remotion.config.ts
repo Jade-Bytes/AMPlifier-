@@ -1,0 +1,10 @@
+import { Config } from '@remotion/cli/config';
+
+Config.setChromiumOpenGlRenderer('angle');
+Config.setVideoImageFormat('jpeg');
+Config.setJpegQuality(95);
+Config.setCodec('h264');
+Config.setCrf(14);
+Config.setPixelFormat('yuv420p');
+Config.setAudioCodec('aac');
+Config.setOverwriteOutput(true);

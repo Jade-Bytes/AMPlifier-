@@ -177,6 +177,50 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; te
 .section { max-width: 1160px; margin: 0 auto; padding: 140px 24px 0; }
 .section > h2 { max-width: 15em; font-size: clamp(32px, 4.4vw, 52px); font-weight: 700; line-height: 1.05; letter-spacing: -.025em; }
 
+/* ───────── Trailer ───────── */
+.trailer-link {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 8px 14px; border-radius: var(--r-pill);
+  font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); text-decoration: none;
+  transition: color var(--ease), background-color var(--ease);
+}
+.trailer-link:hover { color: var(--text); background: var(--hover); }
+.trailer-link svg { width: 16px; height: 16px; fill: var(--signal); }
+.trailer-stage {
+  position: relative; margin-top: 48px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-xl);
+  background: linear-gradient(var(--bg-deep), var(--bg-deep)) padding-box, var(--grad-edge) border-box;
+  border: 1px solid transparent; box-shadow: var(--shadow-pop);
+}
+.trailer-stage video { display: block; width: 100%; height: 100%; background: var(--bg-deep); }
+.trailer-play {
+  position: absolute; inset: 0; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 12px;
+  padding: 0 16px clamp(16px, 4vw, 40px); border: 0; border-radius: inherit; cursor: pointer; color: var(--text);
+  background: linear-gradient(to top, var(--scrim), transparent 55%);
+  font: 700 var(--fs-lg)/1.2 var(--font-display);
+}
+.trailer-play[hidden] { display: none; }
+.trailer-play:focus-visible { box-shadow: inset 0 0 0 3px var(--signal); }
+.trailer-play-mark {
+  display: grid; place-items: center; width: clamp(56px, 8vw, 84px); aspect-ratio: 1; border-radius: var(--r-pill);
+  background: var(--grad-primary); color: var(--on-primary); box-shadow: var(--shadow-glow);
+  transition: transform var(--dur-2) var(--ease-spring);
+}
+.trailer-play-mark svg { width: 52%; height: 52%; fill: currentColor; }
+.trailer-play:hover .trailer-play-mark { transform: scale(1.08); }
+.trailer-play:active .trailer-play-mark { transform: scale(.96); }
+.trailer-play-label {
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 16px; border-radius: var(--r-md); text-align: center;
+  background: var(--glass-strong); color: var(--text);
+}
+.trailer-play-label small { font: 400 var(--fs-xs)/1.2 var(--font-sans); color: var(--text-3); }
+.trailer-after { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 28px; margin-top: 24px; }
+.trailer-text { flex: 1 1 320px; }
+.trailer-text summary { padding: 14px 0; cursor: pointer; font-weight: 700; font-size: var(--fs-md); color: var(--text); }
+.trailer-text summary:hover { color: var(--signal); }
+.trailer-text div { max-width: 46em; font-size: var(--fs-md); color: var(--text-3); }
+.trailer-text p { margin: 0 0 12px; }
+.trailer-text ol { margin: 0; padding-left: 22px; }
+.trailer-text li + li { margin-top: 8px; }
+
 .bento {
   margin-top: 48px; display: grid; gap: 14px;
   grid-template-columns: repeat(6, 1fr);
@@ -342,7 +386,7 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; te
 [data-motion=full] .dl:nth-child(2) { --n: 1; }
 [data-motion=full] .dl:nth-child(3) { --n: 2; }
 [data-motion=full] .dl:nth-child(4) { --n: 3; }
-[data-motion=full] .downloads-note { animation: fade-up 600ms var(--ease-out) 700ms backwards; }
+[data-motion=full] .downloads-note, [data-motion=full] .trailer-link { animation: fade-up 600ms var(--ease-out) 700ms backwards; }
 [data-motion=full] .console { animation: console-in 1000ms var(--ease-out) 520ms backwards; }
 [data-motion=full] .nav { animation: fade-down 600ms var(--ease-out) backwards; }
 @keyframes line-up { from { transform: translateY(108%); } }
@@ -401,6 +445,9 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; te
 }
 @media (max-width: 480px) {
   .downloads { grid-template-columns: 1fr; }
+  .trailer-play { justify-content: center; font-size: var(--fs-md); gap: 8px; }
+  .trailer-play-label { padding: 4px 10px; }
+  .trailer-play-label small { display: none; }
 }
 /* Reduced motion (app setting or OS; resolved in landing.html): everything appears in its final state. */
 [data-motion=reduced] { scroll-behavior: auto; }

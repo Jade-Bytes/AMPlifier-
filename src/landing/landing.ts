@@ -255,6 +255,40 @@ function wireDownloads() {
   });
 }
 
+/* ───────── Trailer: loads and plays only on a click, with sound ───────── */
+
+function wireTrailer() {
+  const video = document.getElementById('trailer-video') as HTMLVideoElement | null;
+  const play = document.getElementById('trailer-play');
+  if (!video || !play) return;
+  // Without this script the video keeps its native controls, so it always works.
+  const showPoster = () => {
+    video.controls = false;
+    play.hidden = false;
+  };
+  showPoster();
+  play.addEventListener('click', () => {
+    play.hidden = true;
+    video.controls = true;
+    video.muted = false;
+    video.focus();
+    void video.play().catch(() => { /* The browser refused: its native controls are showing, so the visitor can start it. */ });
+  });
+  // A device can claim WebM support and still fail to decode it. Carry on from the same spot with the MP4.
+  video.addEventListener('error', () => {
+    const mp4 = video.querySelector<HTMLSourceElement>('source[type="video/mp4"]');
+    if (!mp4 || !video.currentSrc.endsWith('.webm')) return;
+    const resumeAt = video.currentTime;
+    video.src = mp4.src;
+    video.currentTime = resumeAt;
+    void video.play().catch(() => { /* Its native controls are showing. */ });
+  });
+  video.addEventListener('ended', () => {
+    video.load(); // back to the poster
+    showPoster();
+  });
+}
+
 /* ───────── URL follows the section being read ───────── */
 
 // The section under this line of the viewport is the current one.
@@ -322,7 +356,7 @@ function wireSectionUrl() {
 
 /* ───────── Entrance animations as each part scrolls into view ───────── */
 
-const REVEAL_TARGETS = '.section > h2, .steps, .bento > .tile, .ledger-wrap, .rules > div, .install > div, .faq > details, .closing > *';
+const REVEAL_TARGETS = '.section > h2, .trailer-stage, .trailer-after, .steps, .bento > .tile, .ledger-wrap, .rules > div, .install > div, .faq > details, .closing > *';
 const MAX_STAGGER = 4;
 
 function wireReveals() {
@@ -349,5 +383,6 @@ wireSimulator();
 wireTiles();
 highlightPlatform();
 wireDownloads();
+wireTrailer();
 wireReveals();
 wireSectionUrl();

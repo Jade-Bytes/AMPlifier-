@@ -11,6 +11,7 @@
     "desktop/preload.cjs",
     "desktop/icon.png",
     "dist/**/*",
+    "!dist/trailer/**/*",
     "!node_modules/**/*"
   ],
   "extraMetadata": {
