@@ -1,5 +1,6 @@
-// Landing page behaviour: console meters, the exam simulator tile, in-view tile effects, sound, and
-// highlighting the visitor's platform. Sound goes through the app's manager (src/lib/sound.ts), so the
+// Landing page behaviour: console meters, the exam simulator tile, in-view tile effects, entrance
+// animations, the section-following URL, download notes, sound, and highlighting the visitor's
+// platform. Sound goes through the app's manager (src/lib/sound.ts), so the
 // same cooldowns, voice limits and on/off preference apply here.
 import { sound, type SoundSettings } from '../lib/sound';
 import { installInteractionSounds } from '../lib/interactionSounds';
@@ -235,7 +236,111 @@ function highlightPlatform() {
     : /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1) ? 'ios'
     : /windows/i.test(ua) ? 'windows'
     : 'mac';
-  document.querySelector(`.dl[data-platform="${platform}"]`)?.classList.add('is-yours');
+  document.querySelectorAll(`[data-platform="${platform}"]`).forEach((el) => el.classList.add('is-yours'));
+}
+
+/* ───────── Downloads: confirm the start and say what the device will ask ───────── */
+
+const DOWNLOAD_NOTES: Record<string, string> = {
+  android: 'Your download is starting. Open the file when it finishes, and allow your browser to install apps if Android asks.',
+  windows: 'Your download is starting. Run the installer when it finishes. If SmartScreen appears, choose More info, then Run anyway.',
+};
+
+function wireDownloads() {
+  const note = document.getElementById('platform-note');
+  document.querySelectorAll<HTMLElement>('[data-download]').forEach((link) => {
+    link.addEventListener('click', () => {
+      if (note) note.textContent = DOWNLOAD_NOTES[link.dataset.download ?? ''] ?? note.textContent;
+    });
+  });
+}
+
+/* ───────── URL follows the section being read ───────── */
+
+// The section under this line of the viewport is the current one.
+const SECTION_LINE = 0.4;
+// Upper limit for a smooth scroll from a link, for browsers without the scrollend event.
+const LINK_SCROLL_MS = 1400;
+
+function wireSectionUrl() {
+  const regions = [...document.querySelectorAll<HTMLElement>('[data-spy]')];
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.nav-links a')];
+  const highlight = (section: string | null) => {
+    links.forEach((link) => {
+      if (link.hash === `#${section}`) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    });
+  };
+
+  let current: string | null = location.hash.slice(1) || null;
+  let following = true;
+  let timer = 0;
+  highlight(current);
+
+  const sectionInView = () => {
+    if (window.scrollY < 24) return null; // the very top of the page keeps a clean address
+    const atEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+    if (atEnd) return regions[regions.length - 1]?.dataset.spy ?? null;
+    const line = window.innerHeight * SECTION_LINE;
+    let found: string | null = null;
+    for (const region of regions) if (region.getBoundingClientRect().top <= line) found = region.dataset.spy ?? null;
+    return found;
+  };
+
+  const sync = () => {
+    if (!following) return;
+    const next = sectionInView();
+    if (next === current) return;
+    current = next;
+    // replaceState keeps the Back button useful and never makes the page jump.
+    history.replaceState(history.state, '', next ? `#${next}` : location.pathname + location.search);
+    highlight(next);
+  };
+
+  const resume = () => {
+    window.clearTimeout(timer);
+    following = true;
+    sync();
+  };
+
+  // A link's smooth scroll passes other sections; the address should go straight to the destination.
+  document.addEventListener('click', (event) => {
+    const link = (event.target as Element).closest?.<HTMLAnchorElement>('a[href^="#"]');
+    if (!link) return;
+    following = false;
+    current = link.hash.slice(1) || null;
+    highlight(current);
+    window.clearTimeout(timer);
+    timer = window.setTimeout(resume, LINK_SCROLL_MS);
+  });
+  window.addEventListener('scrollend', () => { if (!following) resume(); });
+  window.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('hashchange', () => { current = location.hash.slice(1) || null; highlight(current); });
+  // With a hash in the address the browser is about to scroll there, and that scroll will sync.
+  if (!location.hash) sync();
+}
+
+/* ───────── Entrance animations as each part scrolls into view ───────── */
+
+const REVEAL_TARGETS = '.section > h2, .steps, .bento > .tile, .ledger-wrap, .rules > div, .install > div, .faq > details, .closing > *';
+const MAX_STAGGER = 4;
+
+function wireReveals() {
+  if (reducedMotion) return; // everything simply stays in its final state
+  const targets = document.querySelectorAll<HTMLElement>(REVEAL_TARGETS);
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      observer.unobserve(entry.target);
+      entry.target.classList.replace('will-reveal', 'is-revealed');
+    }
+  }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+  targets.forEach((el) => {
+    const position = [...(el.parentElement?.children ?? [])].indexOf(el);
+    el.style.setProperty('--n', String(Math.min(position, MAX_STAGGER)));
+    el.classList.add('will-reveal');
+    observer.observe(el);
+  });
 }
 
 wireSound();
@@ -243,3 +348,6 @@ renderConsole();
 wireSimulator();
 wireTiles();
 highlightPlatform();
+wireDownloads();
+wireReveals();
+wireSectionUrl();

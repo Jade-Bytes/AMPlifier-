@@ -50,6 +50,7 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; te
   transition: color var(--ease), background-color var(--ease);
 }
 .nav-links a:hover { color: var(--text); background: var(--hover); }
+.nav-links a[aria-current=true] { color: var(--signal); }
 .nav-end { justify-self: end; display: flex; align-items: center; gap: 8px; }
 .sound-toggle, .replay {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -234,7 +235,80 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; te
 .r-est { color: var(--signal); }
 .r-proj { color: var(--gain); }
 
-.rules { margin: 48px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+/* How it works: the line runs recorded, projected, target, the same order the colours mean in the app. */
+.steps {
+  position: relative; list-style: none; margin: 56px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;
+}
+.steps::before {
+  content: ''; position: absolute; top: 19px; left: 19px; right: 0; height: 2px; transform-origin: left;
+  background: linear-gradient(to right, var(--signal), var(--gain) 55%, var(--valve));
+}
+.steps li { position: relative; }
+.step-mark {
+  position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-pill);
+  background: var(--bg); border: 2px solid var(--signal); color: var(--text);
+  font: 700 var(--fs-md)/1 var(--font-display);
+}
+.steps li:nth-child(2) .step-mark { border-color: var(--gain); }
+.steps li:nth-child(3) .step-mark { border-color: var(--valve); }
+.steps h3 { margin-top: 22px; font-size: var(--fs-xl); font-weight: 700; letter-spacing: -.01em; }
+.steps p { margin: 8px 0 0; max-width: 28em; font-size: var(--fs-md); color: var(--text-3); }
+
+/* Worked grade: the table's numbers drawn as one level meter on the console's 0 to 100 tick pattern. */
+.ledger-wrap { margin-top: 48px; }
+.ledger { width: 100%; border-collapse: collapse; font-size: var(--fs-md); font-variant-numeric: tabular-nums; }
+.ledger caption { caption-side: top; padding-bottom: 14px; text-align: left; font-size: var(--fs-sm); color: var(--text-3); }
+.ledger th, .ledger td { padding: 14px 0; text-align: right; font-weight: 400; border-top: 1px solid var(--border); }
+.ledger th:first-child { text-align: left; color: var(--text); }
+.ledger thead th { padding-block: 10px; font-size: var(--fs-xs); color: var(--text-faint); border-top: 0; }
+.ledger thead th:first-child { color: var(--text-faint); }
+.ledger td { color: var(--text-2); width: 16%; }
+.ledger tfoot th, .ledger tfoot td {
+  border-top: 1px solid var(--border-strong); color: var(--text);
+  font: 700 var(--fs-2xl)/1.1 var(--font-display);
+}
+.seg-key { display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 3px; }
+.seg-1 { background: var(--signal); }
+.seg-2 { background: var(--signal); opacity: .66; }
+.seg-3 { background: var(--signal); opacity: .38; }
+.level { position: relative; height: 34px; margin-top: 18px; background: repeating-linear-gradient(to right, var(--track) 0 6px, transparent 6px 9px); }
+.level-fill {
+  display: flex; width: 83.2%; height: 100%; transform-origin: left;
+  -webkit-mask: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 9px);
+  mask: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 9px);
+}
+.level-fill span { flex-basis: 0; }
+.level-target { position: absolute; top: -5px; bottom: -5px; left: 85%; width: 2px; background: var(--valve); box-shadow: 0 0 10px var(--valve); }
+.ledger-note { margin: 16px 0 0; max-width: 42em; font-size: var(--fs-md); color: var(--text-2); }
+
+/* Install and Questions: heading on the left, a plain list on the right. */
+.split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: start; }
+.install { margin: 0; }
+.install div, .faq details { border-top: 1px solid var(--border); }
+.install div { padding: 22px 0; }
+.install dt { font: 700 var(--fs-lg)/1.3 var(--font-display); color: var(--text); transition: color var(--ease); }
+.install .is-yours dt { color: var(--signal); }
+.install dd { margin: 6px 0 0; max-width: 40em; font-size: var(--fs-md); color: var(--text-3); }
+.install a { color: var(--text); font-weight: 700; text-underline-offset: 3px; }
+.install a:hover { color: var(--signal); }
+.faq summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0;
+  cursor: pointer; list-style: none; color: var(--text); font: 700 var(--fs-lg)/1.3 var(--font-display);
+  transition: color var(--ease);
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary:hover { color: var(--signal); }
+.faq summary::after {
+  content: ''; flex: none; width: 12px; height: 12px; color: var(--text-3);
+  background: linear-gradient(currentColor, currentColor) center / 100% 2px no-repeat, linear-gradient(currentColor, currentColor) center / 2px 100% no-repeat;
+  transition: transform var(--dur-3) var(--ease-spring);
+}
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details p { margin: 0; padding: 0 32px 22px 0; max-width: 40em; font-size: var(--fs-md); color: var(--text-3); }
+[data-motion=full] .faq details[open] p { animation: fade-up 320ms var(--ease-out); }
+
+.rules { margin: 72px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
 .rules div { border-top: 1px solid var(--border-strong); padding-top: 20px; }
 .rules dt { font: 700 var(--fs-lg)/1.3 var(--font-display); color: var(--text); }
 .rules dd { margin: 8px 0 0; font-size: var(--fs-md); color: var(--text-3); }
@@ -276,15 +350,45 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--text); margin: 0; te
 @keyframes fade-down { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes console-in { from { opacity: 0; transform: translateY(40px) scale(.98); } }
 
+/* ───────── Entrance on scroll (classes set by landing.ts, never with reduced motion) ───────── */
+.will-reveal { opacity: 0; }
+.is-revealed { animation: reveal 760ms var(--ease-out) backwards; animation-delay: calc(var(--n, 0) * 70ms); }
+.section > h2.is-revealed { animation-delay: 0ms; }
+/* The steps arrive along their line, one after another. */
+.steps.is-revealed { animation: none; }
+.steps.is-revealed::before { animation: draw-x 1200ms var(--ease-out) backwards; }
+.steps.is-revealed li { animation: reveal 700ms var(--ease-out) backwards; }
+.steps.is-revealed li:nth-child(2) { animation-delay: 220ms; }
+.steps.is-revealed li:nth-child(3) { animation-delay: 440ms; }
+.ledger-wrap.is-revealed .level-fill { animation: draw-x 1100ms var(--ease-out) 260ms backwards; }
+@keyframes reveal { from { opacity: 0; transform: translateY(26px); } }
+@keyframes draw-x { from { transform: scaleX(0); } }
+@keyframes draw-y { from { transform: scaleY(0); } }
+@media print { .will-reveal { opacity: 1; } }
+
 /* ───────── Responsive ───────── */
+@media (max-width: 1000px) {
+  .nav-inner { grid-template-columns: 1fr auto; }
+  .nav-links { display: none; }
+}
 @media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; gap: 32px; }
   .downloads { grid-template-columns: repeat(2, 1fr); }
   .bento { grid-template-columns: 1fr; grid-template-areas: 'sim' 'forecast' 'report' 'gradebook' 'plan'; }
   .rules { grid-template-columns: 1fr; gap: 28px; }
 }
 @media (max-width: 720px) {
-  .nav-inner { grid-template-columns: 1fr auto; padding: 10px 16px; }
-  .nav-links { display: none; }
+  .nav-inner { padding: 10px 16px; }
+  .steps { grid-template-columns: 1fr; gap: 32px; margin-top: 40px; }
+  .steps::before { top: 19px; bottom: 0; left: 19px; right: auto; width: 2px; height: auto; transform-origin: top; background: linear-gradient(to bottom, var(--signal), var(--gain) 55%, var(--valve)); }
+  .steps.is-revealed::before { animation-name: draw-y; }
+  .steps li { padding-left: 60px; }
+  .step-mark { position: absolute; left: 0; top: 0; }
+  .steps h3 { margin-top: 6px; }
+  .ledger { font-size: var(--fs-sm); }
+  .ledger td { width: 17%; }
+  .ledger tfoot th, .ledger tfoot td { font-size: var(--fs-xl); }
+  .seg-key { margin-right: 6px; }
   .hero { padding: 72px 16px 40px; }
   .console-wrap, .section, .closing, .footer { padding-left: 16px; padding-right: 16px; }
   .section { padding-top: 96px; }
